@@ -1,0 +1,19 @@
+<section class="toolbar">
+  <h1>Buzones a Gestionar</h1>
+  <div class="actions">
+    <button class="secondary" (click)="refresh()">Recargar</button>
+    <button class="secondary" (click)="gestionarIncidencias()">Ver incidencias</button>
+    <button class="danger" (click)="logout()">Cerrar sesion</button>
+  </div>
+</section>
+
+<section *ngIf="error" class="error">{{ error }}</section>
+
+<section class="mailbox-grid">
+  <article class="mailbox-card" *ngFor="let mailbox of mailboxes">
+    <h2>{{ mailbox.nombre }}</h2>
+    <p><strong>ID:</strong> {{ mailbox.id }}</p>
+    <p><strong>Servidor IMAP:</strong> {{ mailbox.servidorImap }}</p>
+    <p><strong>Usuario tecnico:</strong> {{ mailbox.usuario }}</p>
+  </article>
+</section>

@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/etna_helpdesk
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  jackson:
+    default-property-inclusion: non_null
+
+helpdesk:
+  security:
+    users:
+      - username: operador
+        password: operador123
+        roles:
+          - HELPDESK
+      - username: supervisor
+        password: supervisor123
+        roles:
+          - HELPDESK
+          - SUPERVISOR
+  mailboxes:
+    - id: etna-soporte
+      nombre: Soporte ETNA
+      servidor-imap: imap.etna.local:993
+      usuario: soporte@etna.local
+    - id: etna-sistemas
+      nombre: Sistemas ETNA
+      servidor-imap: imap.etna.local:993
+      usuario: sistemas@etna.local
+    - id: etna-comercial
+      nombre: Comercial ETNA
+      servidor-imap: imap.etna.local:993
+      usuario: comercial@etna.local

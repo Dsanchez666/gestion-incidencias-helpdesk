@@ -1,0 +1,59 @@
+:host {
+  display: block;
+  padding: 1rem;
+  background: linear-gradient(180deg, #f7fbff 0%, #eef4fb 100%);
+  min-height: 100vh;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+}
+
+.secondary {
+  background: #1f5e9c;
+  color: #ffffff;
+}
+
+.danger {
+  background: #b42318;
+  color: #ffffff;
+}
+
+.mailbox-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.mailbox-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(20, 57, 96, 0.14);
+}
+
+h2 {
+  margin-top: 0;
+}
+
+.error {
+  margin-top: 1rem;
+  color: #b00020;
+}

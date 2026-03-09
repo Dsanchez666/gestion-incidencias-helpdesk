@@ -1,0 +1,32 @@
+<section class="toolbar">
+  <button (click)="goToMailboxes()">Volver a buzones</button>
+  <button class="danger" (click)="logout()">Cerrar sesion</button>
+</section>
+
+<section class="layout">
+  <article class="panel form-panel">
+    <h1>Helpdesk ETNA - Incidencias de buzon</h1>
+    <label>Asunto <input [(ngModel)]="model.asunto" /></label>
+    <label>Email solicitante <input [(ngModel)]="model.emailSolicitante" /></label>
+    <label>Prioridad
+      <select [(ngModel)]="model.prioridad">
+        <option>BAJA</option>
+        <option>MEDIA</option>
+        <option>ALTA</option>
+        <option>CRITICA</option>
+      </select>
+    </label>
+    <label>Descripcion <textarea [(ngModel)]="model.descripcion"></textarea></label>
+    <button (click)="save()">Registrar incidencia</button>
+    <p *ngIf="error" class="error">{{ error }}</p>
+  </article>
+
+  <article class="panel list-panel">
+    <h2>Incidencias registradas</h2>
+    <ul>
+      <li *ngFor="let item of incidencias">
+        <strong>{{ item.asunto }}</strong> - {{ item.prioridad }} - {{ item.emailSolicitante }}
+      </li>
+    </ul>
+  </article>
+</section>
