@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +27,17 @@ public class EntraIdTestController {
         this.configLoader = configLoader;
     }
 
-    @PostMapping("/test")
+    @PostMapping(value = "/test", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<EntraLoginResponse> test(@RequestBody EntraLoginRequest request) {
+        return testInternal(request);
+    }
+
+    @PostMapping(value = "/test", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<EntraLoginResponse> testForm(@ModelAttribute EntraLoginRequest request) {
+        return testInternal(request);
+    }
+
+    private ResponseEntity<EntraLoginResponse> testInternal(EntraLoginRequest request) {
         if (request == null || request.getUsername() == null || request.getPassword() == null) {
             return ResponseEntity.badRequest()
                     .body(new EntraLoginResponse(false, null, "Faltan credenciales de usuario o clave."));
