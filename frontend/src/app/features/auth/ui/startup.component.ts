@@ -20,10 +20,7 @@ export class StartupComponent {
     private authService: AuthService,
     private router: Router
   ) {
-    if (this.authService.isAuthenticated()) {
-      this.router.navigateByUrl('/buzones');
-      return;
-    }
+    this.authService.logout();
 
     this.entraMockService.validateToken().subscribe({
       next: (response) => {
