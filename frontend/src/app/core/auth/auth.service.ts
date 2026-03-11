@@ -10,7 +10,7 @@ interface LoginResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly tokenKey = 'helpdesk_basic_auth_token';
-  private readonly apiUrl = 'http://localhost:8080/api/auth/login';
+  private readonly apiUrl = 'http://localhost:4000/api/auth/login';
 
   constructor(private http: HttpClient) {}
 

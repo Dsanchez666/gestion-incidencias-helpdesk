@@ -17,12 +17,18 @@
             "tsConfig": "tsconfig.json",
             "assets": ["src/assets"],
             "styles": ["src/styles.scss"]
+          },
+          "configurations": {
+            "development": {
+              "optimization": false,
+              "buildOptimizer": false
+            }
           }
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "etna-helpdesk-frontend:build"
+            "buildTarget": "etna-helpdesk-frontend:build:development"
           }
         }
       }

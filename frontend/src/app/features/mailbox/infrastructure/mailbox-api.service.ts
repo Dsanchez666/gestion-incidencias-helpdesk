@@ -5,7 +5,7 @@ import { Mailbox } from '../domain/mailbox.model';
 
 @Injectable({ providedIn: 'root' })
 export class MailboxApiService {
-  private readonly baseUrl = 'http://localhost:8080/api/buzones';
+  private readonly baseUrl = 'http://localhost:4000/api/buzones';
 
   constructor(private http: HttpClient) {}
 

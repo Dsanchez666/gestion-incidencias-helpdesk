@@ -2,10 +2,10 @@ import { Component } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CreateIncidenciaUseCase } from '../../application/create-incidencia.usecase';
-import { IncidenciaApiService } from '../../infrastructure/incidencia-api.service';
-import { Incidencia } from '../../domain/incidencia.model';
-import { AuthService } from '../../../../core/auth/auth.service';
+import { CreateIncidenciaUseCase } from '../application/create-incidencia.usecase';
+import { IncidenciaApiService } from '../infrastructure/incidencia-api.service';
+import { Incidencia } from '../domain/incidencia.model';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-incidencia-form',
@@ -43,7 +43,7 @@ export class IncidenciaFormComponent {
 
   refresh(): void {
     this.api.list().subscribe({
-      next: (data) => {
+      next: (data: Incidencia[]) => {
         this.incidencias = data;
       },
       error: () => {

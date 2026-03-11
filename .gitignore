@@ -1,9 +1,13 @@
 # Backend
 backend/target/
+backend-inc/.m2/
+backend-inc/target/
+backend-inc/*.log
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.angular/
 
 # IDE/OS
 .vscode/
