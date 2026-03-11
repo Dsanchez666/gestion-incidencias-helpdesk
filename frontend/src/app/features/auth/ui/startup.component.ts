@@ -14,6 +14,8 @@ import { EntraMockService } from '../../../core/auth/entra-mock.service';
 export class StartupComponent {
   statusMessage = 'Conectando con Entra ID...';
   hasError = false;
+  private readonly minDelayMs = 5000;
+  private readonly startedAt = Date.now();
 
   constructor(
     private entraMockService: EntraMockService,
@@ -26,19 +28,25 @@ export class StartupComponent {
       next: (response) => {
         if (response.success && response.accessToken) {
           this.authService.setToken(response.accessToken);
-          this.router.navigateByUrl('/buzones');
+          this.delayThenNavigate('/buzones');
           return;
         }
 
         this.hasError = true;
         this.statusMessage = response.error || 'No se pudo validar el token Entra ID.';
-        setTimeout(() => this.router.navigateByUrl('/login'), 400);
+        this.delayThenNavigate('/login');
       },
       error: () => {
         this.hasError = true;
         this.statusMessage = 'No se pudo validar el token Entra ID.';
-        setTimeout(() => this.router.navigateByUrl('/login'), 400);
+        this.delayThenNavigate('/login');
       }
     });
+  }
+
+  private delayThenNavigate(path: string): void {
+    const elapsed = Date.now() - this.startedAt;
+    const remaining = Math.max(this.minDelayMs - elapsed, 0);
+    setTimeout(() => this.router.navigateByUrl(path), remaining);
   }
 }
