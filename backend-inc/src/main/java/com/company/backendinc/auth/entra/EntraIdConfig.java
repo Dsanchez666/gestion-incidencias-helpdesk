@@ -7,6 +7,7 @@ public class EntraIdConfig {
     private String authorityUrl;
     private String pingUrl;
     private String scope;
+    private String mocktoken;
 
     public String getTenantId() {
         return tenantId;
@@ -54,5 +55,13 @@ public class EntraIdConfig {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    public String getMocktoken() {
+        return mocktoken;
+    }
+
+    public void setMocktoken(String mocktoken) {
+        this.mocktoken = mocktoken;
     }
 }
