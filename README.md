@@ -83,3 +83,7 @@ Credenciales de ejemplo:
 
 Notas:
 - El frontend usa `ng serve` con puerto 3000 y configuraciÃ³n de desarrollo (sin optimizaciones).
+
+## Tests
+
+La documentación de los tests está en docs/TESTS.md.
