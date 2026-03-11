@@ -5,7 +5,7 @@ import { Incidencia } from '../domain/incidencia.model';
 
 @Injectable({ providedIn: 'root' })
 export class IncidenciaApiService {
-  private readonly baseUrl = 'http://localhost:8080/api/incidencias';
+  private readonly baseUrl = 'http://localhost:4000/api/incidencias';
 
   constructor(private http: HttpClient) {}
 
