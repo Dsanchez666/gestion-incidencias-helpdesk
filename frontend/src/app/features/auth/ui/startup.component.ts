@@ -14,6 +14,7 @@ import { EntraMockService } from '../../../core/auth/entra-mock.service';
 export class StartupComponent {
   statusMessage = 'Conectando con Entra ID...';
   hasError = false;
+  tokenUsed = '';
   private readonly minDelayMs = 5000;
   private readonly startedAt = Date.now();
 
@@ -26,14 +27,19 @@ export class StartupComponent {
 
     this.entraMockService.validateToken().subscribe({
       next: (response) => {
-        if (response.success && response.accessToken) {
+        this.tokenUsed = response.accessToken || '';
+        if (response.result === 'valid_token' && response.accessToken) {
           this.authService.setToken(response.accessToken);
           this.delayThenNavigate('/buzones');
           return;
         }
 
         this.hasError = true;
-        this.statusMessage = response.error || 'No se pudo validar el token Entra ID.';
+        if (response.result === 'invalid_token') {
+          this.statusMessage = response.error || 'Token Entra ID invalido.';
+        } else {
+          this.statusMessage = response.error || 'Error validando token Entra ID.';
+        }
         this.delayThenNavigate('/login');
       },
       error: () => {

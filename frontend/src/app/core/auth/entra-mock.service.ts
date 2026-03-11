@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 interface EntraMockResponse {
-  success: boolean;
+  result: 'valid_token' | 'invalid_token' | 'error';
   accessToken?: string;
   error?: string;
 }

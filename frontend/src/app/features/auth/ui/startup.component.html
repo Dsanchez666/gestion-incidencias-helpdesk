@@ -7,5 +7,10 @@
       <span class="dot"></span>
       <span>{{ hasError ? 'Fallo de conexión' : 'Comprobando Entra ID' }}</span>
     </div>
+
+    <div class="token" *ngIf="tokenUsed">
+      <p>Token usado:</p>
+      <code>{{ tokenUsed }}</code>
+    </div>
   </article>
 </section>

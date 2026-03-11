@@ -8,6 +8,7 @@ public class EntraIdConfig {
     private String pingUrl;
     private String scope;
     private String mocktoken;
+    private EntraJwk jwk;
 
     public String getTenantId() {
         return tenantId;
@@ -63,5 +64,13 @@ public class EntraIdConfig {
 
     public void setMocktoken(String mocktoken) {
         this.mocktoken = mocktoken;
+    }
+
+    public EntraJwk getJwk() {
+        return jwk;
+    }
+
+    public void setJwk(EntraJwk jwk) {
+        this.jwk = jwk;
     }
 }

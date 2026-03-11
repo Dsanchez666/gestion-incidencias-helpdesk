@@ -50,6 +50,28 @@
   animation: none;
 }
 
+.token {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.token p {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.token code {
+  display: block;
+  word-break: break-all;
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+}
+
 @keyframes pulse {
   0% {
     transform: scale(1);
