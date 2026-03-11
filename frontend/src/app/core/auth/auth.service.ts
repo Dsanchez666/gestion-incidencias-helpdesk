@@ -37,6 +37,10 @@ export class AuthService {
     sessionStorage.setItem(this.tokenKey, token);
   }
 
+  setToken(token: string): void {
+    sessionStorage.setItem(this.tokenKey, token);
+  }
+
   getToken(): string | null {
     return sessionStorage.getItem(this.tokenKey);
   }

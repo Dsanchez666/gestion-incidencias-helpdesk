@@ -10,9 +10,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  const isJwt = token.split('.').length === 3;
+  const scheme = isJwt ? 'Bearer' : 'Basic';
+
   const authReq = req.clone({
     setHeaders: {
-      Authorization: `Basic ${token}`
+      Authorization: `${scheme} ${token}`
     }
   });
 

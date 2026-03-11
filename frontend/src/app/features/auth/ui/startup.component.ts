@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgIf } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
-import { EntraIdService } from '../../../core/auth/entra-id.service';
+import { EntraMockService } from '../../../core/auth/entra-mock.service';
 
 @Component({
   selector: 'app-startup',
@@ -16,7 +16,7 @@ export class StartupComponent {
   hasError = false;
 
   constructor(
-    private entraIdService: EntraIdService,
+    private entraMockService: EntraMockService,
     private authService: AuthService,
     private router: Router
   ) {
@@ -25,16 +25,23 @@ export class StartupComponent {
       return;
     }
 
-    this.entraIdService.testConnection().subscribe((connected) => {
-      if (connected) {
-        this.authService.startEntraSession();
-        this.router.navigateByUrl('/buzones');
-        return;
-      }
+    this.entraMockService.validateToken().subscribe({
+      next: (response) => {
+        if (response.success && response.accessToken) {
+          this.authService.setToken(response.accessToken);
+          this.router.navigateByUrl('/buzones');
+          return;
+        }
 
-      this.hasError = true;
-      this.statusMessage = 'No se pudo conectar con Entra ID. Mostrando login.';
-      setTimeout(() => this.router.navigateByUrl('/login'), 400);
+        this.hasError = true;
+        this.statusMessage = response.error || 'No se pudo validar el token Entra ID.';
+        setTimeout(() => this.router.navigateByUrl('/login'), 400);
+      },
+      error: () => {
+        this.hasError = true;
+        this.statusMessage = 'No se pudo validar el token Entra ID.';
+        setTimeout(() => this.router.navigateByUrl('/login'), 400);
+      }
     });
   }
 }
