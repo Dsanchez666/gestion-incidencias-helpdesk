@@ -12,9 +12,9 @@ public class EntraIdMockConfigLoader {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public EntraIdConfig load() throws IOException {
-        Path configPath = Paths.get("..", "frontend", "src", "assets", "EntraIdConfig.json");
+        Path configPath = Paths.get("..", "frontend", "src", "assets", "EntraID_Conf.json");
         if (!Files.exists(configPath)) {
-            throw new IOException("No se encuentra EntraIdConfig.json en " + configPath.toAbsolutePath());
+            throw new IOException("No se encuentra EntraID_Conf.json en " + configPath.toAbsolutePath());
         }
 
         String json = Files.readString(configPath);

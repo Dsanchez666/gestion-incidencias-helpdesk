@@ -8,6 +8,7 @@ backend-inc/*.log
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
+frontend/src/assets/EntraID_Conf.json
 
 # IDE/OS
 .vscode/

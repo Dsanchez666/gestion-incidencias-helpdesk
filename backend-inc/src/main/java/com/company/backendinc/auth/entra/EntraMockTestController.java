@@ -22,13 +22,13 @@ public class EntraMockTestController {
             config = mockConfigLoader.load();
         } catch (IOException ex) {
             return ResponseEntity.internalServerError()
-                    .body(new EntraLoginResponse(false, null, "No se pudo leer EntraIdConfig.json: " + ex.getMessage()));
+                    .body(new EntraLoginResponse(false, null, "No se pudo leer EntraID_Conf.json: " + ex.getMessage()));
         }
 
         String token = config.getMocktoken();
         if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new EntraLoginResponse(false, null, "mocktoken no configurado en EntraIdConfig.json."));
+                    .body(new EntraLoginResponse(false, null, "mocktoken no configurado en EntraID_Conf.json."));
         }
 
         if ("REEMPLAZAR_TOKEN".equals(token)) {
