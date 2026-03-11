@@ -19,8 +19,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
-        if (ROOT_USER.equals(request.username()) && ROOT_PASS.equals(request.password())) {
-            return ResponseEntity.ok(new LoginResponse(request.username(), "login ok"));
+        if (ROOT_USER.equals(request.getUsername()) && ROOT_PASS.equals(request.getPassword())) {
+            return ResponseEntity.ok(new LoginResponse(request.getUsername(), "login ok"));
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

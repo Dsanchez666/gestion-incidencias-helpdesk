@@ -1,0 +1,11 @@
+<section class="startup-layout">
+  <article class="startup-card">
+    <h1>Arranque del Sistema</h1>
+    <p>{{ statusMessage }}</p>
+
+    <div class="status" [class.error]="hasError">
+      <span class="dot"></span>
+      <span>{{ hasError ? 'Fallo de conexión' : 'Comprobando Entra ID' }}</span>
+    </div>
+  </article>
+</section>

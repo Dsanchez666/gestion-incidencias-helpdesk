@@ -6,16 +6,17 @@ import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app/app.component';
 import { IncidenciaFormComponent } from './app/features/incidencia/ui/incidencia-form.component';
 import { LoginComponent } from './app/features/auth/ui/login.component';
+import { StartupComponent } from './app/features/auth/ui/startup.component';
 import { MailboxListComponent } from './app/features/mailbox/ui/mailbox-list.component';
 import { authGuard } from './app/core/auth/auth.guard';
 import { authInterceptor } from './app/core/auth/auth.interceptor';
 
 const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
+  { path: '', component: StartupComponent },
   { path: 'login', component: LoginComponent },
   { path: 'buzones', component: MailboxListComponent, canActivate: [authGuard] },
   { path: 'incidencias', component: IncidenciaFormComponent, canActivate: [authGuard] },
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: '' }
 ];
 
 bootstrapApplication(AppComponent, {

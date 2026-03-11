@@ -32,6 +32,11 @@ export class AuthService {
     return !!this.getToken();
   }
 
+  startEntraSession(): void {
+    const token = btoa(`entra:${Date.now()}`);
+    sessionStorage.setItem(this.tokenKey, token);
+  }
+
   getToken(): string | null {
     return sessionStorage.getItem(this.tokenKey);
   }
