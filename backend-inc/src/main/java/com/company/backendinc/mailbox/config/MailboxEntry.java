@@ -1,18 +1,9 @@
-package com.company.backendinc.mailbox;
+package com.company.backendinc.mailbox.config;
 
-public class Mailbox {
+public class MailboxEntry {
     private String id;
     private String nombre;
     private String direccionCorreo;
-
-    public Mailbox() {
-    }
-
-    public Mailbox(String id, String nombre, String direccionCorreo) {
-        this.id = id;
-        this.nombre = nombre;
-        this.direccionCorreo = direccionCorreo;
-    }
 
     public String getId() {
         return id;
