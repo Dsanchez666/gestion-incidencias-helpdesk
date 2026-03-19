@@ -20,14 +20,17 @@ export class MailboxApiService {
   constructor(private http: HttpClient) {}
 
   list(): Observable<Mailbox[]> {
+    console.info('MailboxApi: GET /api/buzones');
     return this.http.get<Mailbox[]>(this.baseUrl);
   }
 
   testGraph(): Observable<ConnectionResult[]> {
+    console.info('MailboxApi: POST /api/mailboxes/graph/test');
     return this.http.post<ConnectionResult[]>(this.testGraphUrl, {});
   }
 
   testExchange(): Observable<ConnectionResult[]> {
+    console.info('MailboxApi: POST /api/mailboxes/exchange/test');
     return this.http.post<ConnectionResult[]>(this.testExchangeUrl, {});
   }
 }

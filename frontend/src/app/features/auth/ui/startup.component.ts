@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgIf } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
-import { EntraMockService } from '../../../core/auth/entra-mock.service';
+import { EntraAppService } from '../../../core/auth/entra-app.service';
 
 @Component({
   selector: 'app-startup',
@@ -19,32 +19,33 @@ export class StartupComponent {
   private readonly startedAt = Date.now();
 
   constructor(
-    private entraMockService: EntraMockService,
+    private entraAppService: EntraAppService,
     private authService: AuthService,
     private router: Router
   ) {
     this.authService.logout();
+    console.info('Startup: solicitando token app-to-app en Entra ID');
 
-    this.entraMockService.validateToken().subscribe({
+    this.entraAppService.getAppToken().subscribe({
       next: (response) => {
+        console.info('Startup: respuesta app-token', response);
         this.tokenUsed = response.accessToken || '';
-        if (response.result === 'valid_token' && response.accessToken) {
+        if (response.success && response.accessToken) {
+          console.info('Startup: token recibido, guardando token y navegando a /buzones');
           this.authService.setToken(response.accessToken);
           this.delayThenNavigate('/buzones');
           return;
         }
 
         this.hasError = true;
-        if (response.result === 'invalid_token') {
-          this.statusMessage = response.error || 'Token Entra ID invalido.';
-        } else {
-          this.statusMessage = response.error || 'Error validando token Entra ID.';
-        }
+        this.statusMessage = response.error || 'No se pudo obtener token de Entra ID.';
+        console.warn('Startup: fallo obteniendo token, navegando a /login');
         this.delayThenNavigate('/login');
       },
       error: () => {
         this.hasError = true;
-        this.statusMessage = 'No se pudo validar el token Entra ID.';
+        this.statusMessage = 'No se pudo obtener token de Entra ID.';
+        console.error('Startup: error de red en app-token, navegando a /login');
         this.delayThenNavigate('/login');
       }
     });

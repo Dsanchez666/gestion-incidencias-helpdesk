@@ -29,13 +29,16 @@ export class MailboxListComponent {
   refresh(): void {
     this.error = '';
     this.testMessage = '';
+    console.info('Buzones UI: solicitando listado de buzones');
     this.mailboxApiService.list().subscribe({
       next: (data) => {
         this.mailboxes = data;
+        console.info(`Buzones UI: recibidos ${data.length} buzones`);
       },
       error: () => {
         this.mailboxes = [];
         this.error = 'No se pudieron cargar los buzones configurados';
+        console.error('Buzones UI: error cargando buzones');
       }
     });
   }
