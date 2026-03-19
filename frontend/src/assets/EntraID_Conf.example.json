@@ -4,7 +4,7 @@
   "clientSecret": "REEMPLAZAR_CLIENT_SECRET",
   "authorityUrl": "https://login.microsoftonline.com/common/v2.0",
   "pingUrl": "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
-  "scope": "openid profile offline_access",
+  "scope": "https://graph.microsoft.com/.default",
   "mocktoken": "REEMPLAZAR_TOKEN",
   "jwk": {
     "kty": "RSA",

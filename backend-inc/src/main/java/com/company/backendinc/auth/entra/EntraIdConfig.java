@@ -7,6 +7,7 @@ public class EntraIdConfig {
     private String authorityUrl;
     private String pingUrl;
     private String scope;
+    private String redirectUri;
     private String mocktoken;
     private EntraJwk jwk;
 
@@ -56,6 +57,14 @@ public class EntraIdConfig {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    public String getRedirectUri() {
+        return redirectUri;
+    }
+
+    public void setRedirectUri(String redirectUri) {
+        this.redirectUri = redirectUri;
     }
 
     public String getMocktoken() {

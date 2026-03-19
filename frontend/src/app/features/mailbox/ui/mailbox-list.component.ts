@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { Router } from '@angular/router';
-import { MailboxApiService } from '../infrastructure/mailbox-api.service';
+import { ConnectionResult, MailboxApiService } from '../infrastructure/mailbox-api.service';
 import { Mailbox } from '../domain/mailbox.model';
 import { AuthService } from '../../../core/auth/auth.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-mailbox-list',
@@ -15,6 +16,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 export class MailboxListComponent {
   mailboxes: Mailbox[] = [];
   error = '';
+  testMessage = '';
 
   constructor(
     private mailboxApiService: MailboxApiService,
@@ -26,13 +28,43 @@ export class MailboxListComponent {
 
   refresh(): void {
     this.error = '';
+    this.testMessage = '';
+    console.info('Buzones UI: solicitando listado de buzones');
     this.mailboxApiService.list().subscribe({
       next: (data) => {
         this.mailboxes = data;
+        console.info(`Buzones UI: recibidos ${data.length} buzones`);
       },
       error: () => {
         this.mailboxes = [];
         this.error = 'No se pudieron cargar los buzones configurados';
+        console.error('Buzones UI: error cargando buzones');
+      }
+    });
+  }
+
+  testGraph(): void {
+    this.runTest('MS Graph', () => this.mailboxApiService.testGraph());
+  }
+
+  testExchange(): void {
+    this.runTest('Exchange', () => this.mailboxApiService.testExchange());
+  }
+
+  private runTest(label: string, call: () => Observable<ConnectionResult[]>): void {
+    this.error = '';
+    this.testMessage = `Probando conexion ${label}...`;
+    call().subscribe({
+      next: (results) => {
+        const failed = results.filter((r) => r.status !== 'ok');
+        if (failed.length === 0) {
+          this.testMessage = `${label}: conexion OK (${results.length} buzones).`;
+          return;
+        }
+        this.testMessage = `${label}: errores en ${failed.length}/${results.length} buzones.`;
+      },
+      error: () => {
+        this.testMessage = `${label}: no se pudo completar la prueba.`;
       }
     });
   }

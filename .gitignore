@@ -9,6 +9,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.angular/
 frontend/src/assets/EntraID_Conf.json
+frontend/src/assets/Mailboxes_Conf.json
 
 # IDE/OS
 .vscode/

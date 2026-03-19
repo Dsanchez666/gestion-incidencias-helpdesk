@@ -1,0 +1,11 @@
+{
+  "graphBaseUrl": "https://graph.microsoft.com/v1.0",
+  "exchangeEwsUrl": "https://outlook.office365.com/EWS/Exchange.asmx",
+  "mailboxes": [
+    {
+      "id": "example",
+      "nombre": "SOPORTE",
+      "direccionCorreo": "sample@empresa.es"
+    }
+  ]
+}
