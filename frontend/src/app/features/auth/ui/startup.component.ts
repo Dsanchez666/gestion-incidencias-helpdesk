@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { NgIf } from '@angular/common';
+import { LogoutUseCase } from '../../../core/auth/application/logout.usecase';
 import { AuthService } from '../../../core/auth/auth.service';
-import { EntraAppService } from '../../../core/auth/entra-app.service';
 
 @Component({
   selector: 'app-startup',
@@ -12,48 +13,68 @@ import { EntraAppService } from '../../../core/auth/entra-app.service';
   styleUrl: './startup.component.scss'
 })
 export class StartupComponent {
-  statusMessage = 'Conectando con Entra ID...';
+  statusMessage = 'Este tenant exige MFA. Inicia sesión con Microsoft para continuar.';
   hasError = false;
-  tokenUsed = '';
-  private readonly minDelayMs = 5000;
-  private readonly startedAt = Date.now();
+  isLoading = false;
+  readonly loginUrl = 'http://localhost:4000/api/auth/entra/login';
+  readonly statusUrl = 'http://localhost:4000/api/auth/entra/status';
 
   constructor(
-    private entraAppService: EntraAppService,
+    private logoutUseCase: LogoutUseCase,
     private authService: AuthService,
+    private http: HttpClient,
     private router: Router
   ) {
-    this.authService.logout();
-    console.info('Startup: solicitando token app-to-app en Entra ID');
+    console.info('Startup: comprobando si ya existe sesión interactiva en backend');
+    this.comprobarEstadoLoginSilencioso();
+  }
 
-    this.entraAppService.getAppToken().subscribe({
+  iniciarSesionMicrosoft(): void {
+    this.hasError = false;
+    this.statusMessage = 'Redirigiendo a Microsoft Entra ID...';
+    console.info('Startup: redirigiendo a login interactivo', { loginUrl: this.loginUrl });
+    window.location.href = this.loginUrl;
+  }
+
+  comprobarEstadoLogin(): void {
+    this.hasError = false;
+    this.isLoading = true;
+    this.statusMessage = 'Comprobando sesión interactiva en backend...';
+    this.http.get<{ loggedIn: boolean; account?: string | null }>(this.statusUrl).subscribe({
       next: (response) => {
-        console.info('Startup: respuesta app-token', response);
-        this.tokenUsed = response.accessToken || '';
-        if (response.success && response.accessToken) {
-          console.info('Startup: token recibido, guardando token y navegando a /buzones');
-          this.authService.setToken(response.accessToken);
-          this.delayThenNavigate('/buzones');
+        this.isLoading = false;
+        console.info('Startup: estado sesión interactiva', response);
+        if (response.loggedIn) {
+          this.authService.setToken(`entra-interactive-${Date.now()}`);
+          this.statusMessage = 'Sesión activa. Accediendo a buzones...';
+          this.router.navigateByUrl('/buzones');
           return;
         }
-
         this.hasError = true;
-        this.statusMessage = response.error || 'No se pudo obtener token de Entra ID.';
-        console.warn('Startup: fallo obteniendo token, navegando a /login');
-        this.delayThenNavigate('/login');
+        this.statusMessage = 'No hay sesión interactiva todavía. Completa el login y vuelve a comprobar.';
       },
-      error: () => {
+      error: (error) => {
+        this.isLoading = false;
         this.hasError = true;
-        this.statusMessage = 'No se pudo obtener token de Entra ID.';
-        console.error('Startup: error de red en app-token, navegando a /login');
-        this.delayThenNavigate('/login');
+        this.statusMessage = 'No se pudo comprobar el estado del login interactivo.';
+        console.error('Startup: error comprobando estado interactivo', error);
       }
     });
   }
 
-  private delayThenNavigate(path: string): void {
-    const elapsed = Date.now() - this.startedAt;
-    const remaining = Math.max(this.minDelayMs - elapsed, 0);
-    setTimeout(() => this.router.navigateByUrl(path), remaining);
+  private comprobarEstadoLoginSilencioso(): void {
+    this.http.get<{ loggedIn: boolean; account?: string | null }>(this.statusUrl).subscribe({
+      next: (response) => {
+        console.info('Startup: estado silencioso', response);
+        if (response.loggedIn) {
+          this.authService.setToken(`entra-interactive-${Date.now()}`);
+          this.statusMessage = 'Sesión detectada. Accediendo a buzones...';
+          this.router.navigateByUrl('/buzones');
+        }
+      },
+      error: (error) => {
+        console.warn('Startup: no se pudo comprobar estado silencioso', error);
+      }
+    });
   }
 }

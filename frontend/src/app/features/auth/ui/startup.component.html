@@ -1,16 +1,20 @@
 <section class="startup-layout">
   <article class="startup-card">
-    <h1>Arranque del Sistema</h1>
+    <h1>Acceso Delegado Entra ID</h1>
     <p>{{ statusMessage }}</p>
 
     <div class="status" [class.error]="hasError">
       <span class="dot"></span>
-      <span>{{ hasError ? 'Fallo de conexión' : 'Comprobando Entra ID' }}</span>
+      <span>{{ hasError ? 'Error de autenticación' : 'Esperando login interactivo' }}</span>
     </div>
 
-    <div class="token" *ngIf="tokenUsed">
-      <p>Token usado:</p>
-      <code>{{ tokenUsed }}</code>
+    <div class="credential-form">
+      <button type="button" (click)="iniciarSesionMicrosoft()" [disabled]="isLoading">
+        Iniciar Sesión con Microsoft
+      </button>
+      <button type="button" class="secondary" (click)="comprobarEstadoLogin()" [disabled]="isLoading">
+        {{ isLoading ? 'Comprobando...' : 'Ya inicié sesión, comprobar estado' }}
+      </button>
     </div>
   </article>
 </section>

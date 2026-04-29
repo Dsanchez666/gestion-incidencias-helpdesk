@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Incidencia } from '../domain/incidencia.model';
-import { IncidenciaApiService } from '../infrastructure/incidencia-api.service';
+import { INCIDENCIA_API_PORT, IncidenciaApiPort } from './port/out/incidencia-api.port';
 
 @Injectable({ providedIn: 'root' })
 export class CreateIncidenciaUseCase {
-  constructor(private api: IncidenciaApiService) {}
+  private readonly api = inject(INCIDENCIA_API_PORT) as IncidenciaApiPort;
 
   execute(incidencia: Incidencia): Observable<Incidencia> {
     return this.api.create(incidencia);

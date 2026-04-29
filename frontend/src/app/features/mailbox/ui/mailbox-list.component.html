@@ -3,6 +3,8 @@
   <div class="actions">
     <button class="secondary" (click)="refresh()">Recargar</button>
     <button class="secondary" (click)="testGraph()">MS Graph</button>
+    <button class="secondary" (click)="traceGraph()">Carpetas Graph</button>
+    <button class="secondary" (click)="traceGraphUser()">Carpetas usuario</button>
     <button class="secondary" (click)="testExchange()">Exchange</button>
     <button class="secondary" (click)="gestionarIncidencias()">Ver incidencias</button>
     <button class="danger" (click)="logout()">Cerrar sesion</button>
@@ -11,11 +13,63 @@
 
 <section *ngIf="error" class="error">{{ error }}</section>
 <section *ngIf="testMessage" class="notice">{{ testMessage }}</section>
+<section *ngIf="graphTraceLoading" class="notice">Consultando Graph y leyendo carpetas...</section>
+<section *ngIf="graphTraceMessage" class="notice">{{ graphTraceMessage }}</section>
+<section *ngIf="graphTraceError" class="error">{{ graphTraceError }}</section>
+
+<section class="trace-help">
+  <p>
+    Usa <strong>Carpetas Graph</strong> para ver el resultado con token de aplicación y
+    <strong>Carpetas usuario</strong> para comprobar si el buzón responde con la sesión interactiva.
+  </p>
+</section>
 
 <section class="mailbox-grid">
-  <article class="mailbox-card" *ngFor="let mailbox of mailboxes">
+  <article class="mailbox-card" *ngFor="let mailbox of mailboxes; trackBy: trackByMailbox">
     <h2>{{ mailbox.nombre }}</h2>
     <p><strong>ID:</strong> {{ mailbox.id }}</p>
     <p><strong>Correo:</strong> {{ mailbox.direccionCorreo }}</p>
+
+    <section class="trace-variant" *ngIf="graphAppTrace">
+      <h3>Graph app</h3>
+      <ng-container *ngIf="getMailboxTrace(mailbox, 'app') as trace; else noGraphAppData">
+        <p class="status" [class.ok]="trace.status === 'ok'" [class.error]="trace.status !== 'ok'">
+          Estado: {{ trace.status }}
+        </p>
+        <p *ngIf="trace.error" class="inline-error">{{ trace.error }}</p>
+        <ul *ngIf="(trace.folders?.length ?? 0) > 0; else noGraphAppFolders">
+          <li *ngFor="let folder of (trace.folders ?? []); trackBy: trackByFolder">
+            {{ folder.displayName || '(sin nombre)' }}
+          </li>
+        </ul>
+      </ng-container>
+      <ng-template #noGraphAppData>
+        <p class="muted">Todavia no hemos cargado la traza Graph app para este buzón.</p>
+      </ng-template>
+      <ng-template #noGraphAppFolders>
+        <p class="muted">Graph app no devolvió carpetas para este buzón.</p>
+      </ng-template>
+    </section>
+
+    <section class="trace-variant" *ngIf="graphUserTrace">
+      <h3>Graph usuario</h3>
+      <ng-container *ngIf="getMailboxTrace(mailbox, 'user') as trace; else noGraphUserData">
+        <p class="status" [class.ok]="trace.status === 'ok'" [class.error]="trace.status !== 'ok'">
+          Estado: {{ trace.status }}
+        </p>
+        <p *ngIf="trace.error" class="inline-error">{{ trace.error }}</p>
+        <ul *ngIf="(trace.folders?.length ?? 0) > 0; else noGraphUserFolders">
+          <li *ngFor="let folder of (trace.folders ?? []); trackBy: trackByFolder">
+            {{ folder.displayName || '(sin nombre)' }}
+          </li>
+        </ul>
+      </ng-container>
+      <ng-template #noGraphUserData>
+        <p class="muted">Todavia no hemos cargado la traza Graph usuario para este buzón.</p>
+      </ng-template>
+      <ng-template #noGraphUserFolders>
+        <p class="muted">Graph usuario no devolvió carpetas para este buzón.</p>
+      </ng-template>
+    </section>
   </article>
 </section>

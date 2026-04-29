@@ -1,5 +1,6 @@
 package com.company.backendinc.auth.entra;
 
+import com.company.backendinc.auth.entra.application.port.out.EntraConfigurationPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -14,6 +15,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,10 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth/entra")
 public class EntraMockTestController {
     private static final Logger log = LoggerFactory.getLogger(EntraMockTestController.class);
-    private final EntraIdMockConfigLoader mockConfigLoader;
+    private final EntraConfigurationPort mockConfigLoader;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public EntraMockTestController(EntraIdMockConfigLoader mockConfigLoader) {
+    public EntraMockTestController(@Qualifier("entraIdMockConfigLoader") EntraConfigurationPort mockConfigLoader) {
         this.mockConfigLoader = mockConfigLoader;
     }
 

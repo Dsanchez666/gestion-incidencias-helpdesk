@@ -16,6 +16,7 @@
 .actions {
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 button {
@@ -65,4 +66,52 @@ h2 {
   background: #eff6ff;
   color: #1e3a8a;
   border: 1px solid #bfdbfe;
+}
+
+.trace-help {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #dbe4f0;
+  color: #334155;
+}
+
+.trace-variant {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.trace-variant h3 {
+  margin: 0 0 0.5rem;
+  color: #143960;
+}
+
+.status {
+  margin: 0.35rem 0;
+  font-weight: 700;
+}
+
+.status.ok {
+  color: #15803d;
+}
+
+.status.error,
+.inline-error {
+  color: #b42318;
+}
+
+.muted {
+  color: #64748b;
+  margin: 0.35rem 0;
+}
+
+.trace-variant ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.trace-variant li {
+  margin: 0.25rem 0;
 }
