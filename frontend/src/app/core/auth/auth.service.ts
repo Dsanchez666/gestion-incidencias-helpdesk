@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
+import { AuthSessionPort } from './application/port/out/auth-session.port';
 
 interface LoginResponse {
   username: string;
@@ -8,7 +9,7 @@ interface LoginResponse {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AuthService {
+export class AuthService implements AuthSessionPort {
   private readonly tokenKey = 'helpdesk_basic_auth_token';
   private readonly apiUrl = 'http://localhost:4000/api/auth/login';
 

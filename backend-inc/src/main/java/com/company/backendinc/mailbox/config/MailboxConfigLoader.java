@@ -1,5 +1,6 @@
 package com.company.backendinc.mailbox.config;
 
+import com.company.backendinc.mailbox.application.port.out.MailboxConfigPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,10 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MailboxConfigLoader {
+public class MailboxConfigLoader implements MailboxConfigPort {
     private static final Logger log = LoggerFactory.getLogger(MailboxConfigLoader.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Override
     public MailboxConfig load() throws IOException {
         Path configPath = Paths.get("..", "frontend", "src", "assets", "Mailboxes_Conf.json");
         log.info("Buzones: leyendo config desde {}", configPath.toAbsolutePath());

@@ -1,5 +1,6 @@
 package com.company.backendinc.auth.entra;
 
+import com.company.backendinc.auth.entra.application.port.out.EntraConfigurationPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EntraIdMockConfigLoader {
+public class EntraIdMockConfigLoader implements EntraConfigurationPort {
     private static final Logger log = LoggerFactory.getLogger(EntraIdMockConfigLoader.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 

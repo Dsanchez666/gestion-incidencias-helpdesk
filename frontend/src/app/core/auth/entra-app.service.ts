@@ -1,15 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
-interface EntraAppTokenResponse {
-  success: boolean;
-  accessToken?: string | null;
-  error?: string | null;
-}
+import { EntraAppTokenPort, EntraAppTokenResponse } from './application/port/out/entra-app-token.port';
 
 @Injectable({ providedIn: 'root' })
-export class EntraAppService {
+export class EntraAppService implements EntraAppTokenPort {
   private readonly apiUrl = 'http://localhost:4000/api/auth/entra/app-token';
 
   constructor(private http: HttpClient) {}

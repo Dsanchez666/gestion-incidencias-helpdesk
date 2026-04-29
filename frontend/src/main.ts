@@ -10,6 +10,16 @@ import { StartupComponent } from './app/features/auth/ui/startup.component';
 import { MailboxListComponent } from './app/features/mailbox/ui/mailbox-list.component';
 import { authGuard } from './app/core/auth/auth.guard';
 import { authInterceptor } from './app/core/auth/auth.interceptor';
+import { AuthService } from './app/core/auth/auth.service';
+import { EntraAppService } from './app/core/auth/entra-app.service';
+import { EntraUserService } from './app/core/auth/entra-user.service';
+import { AUTH_SESSION_PORT } from './app/core/auth/application/port/out/auth-session.port';
+import { ENTRA_APP_TOKEN_PORT } from './app/core/auth/application/port/out/entra-app-token.port';
+import { ENTRA_USER_TOKEN_PORT } from './app/core/auth/application/port/out/entra-user-token.port';
+import { IncidenciaApiService } from './app/features/incidencia/infrastructure/incidencia-api.service';
+import { INCIDENCIA_API_PORT } from './app/features/incidencia/application/port/out/incidencia-api.port';
+import { MailboxApiService } from './app/features/mailbox/infrastructure/mailbox-api.service';
+import { MAILBOX_API_PORT } from './app/features/mailbox/application/port/out/mailbox-api.port';
 
 const routes: Routes = [
   { path: '', component: StartupComponent },
@@ -21,6 +31,11 @@ const routes: Routes = [
 
 bootstrapApplication(AppComponent, {
   providers: [
+    { provide: AUTH_SESSION_PORT, useExisting: AuthService },
+    { provide: ENTRA_APP_TOKEN_PORT, useExisting: EntraAppService },
+    { provide: ENTRA_USER_TOKEN_PORT, useExisting: EntraUserService },
+    { provide: INCIDENCIA_API_PORT, useExisting: IncidenciaApiService },
+    { provide: MAILBOX_API_PORT, useExisting: MailboxApiService },
     provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(routes),
     importProvidersFrom(FormsModule)

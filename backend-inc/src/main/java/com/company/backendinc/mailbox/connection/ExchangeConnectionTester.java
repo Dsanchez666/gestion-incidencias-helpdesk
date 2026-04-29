@@ -4,14 +4,18 @@ import com.company.backendinc.mailbox.config.MailboxConfig;
 import com.company.backendinc.mailbox.config.MailboxEntry;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 public class ExchangeConnectionTester {
+    private static final Logger log = LoggerFactory.getLogger(ExchangeConnectionTester.class);
     private static final String SOAP_TEMPLATE =
             "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
             "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
@@ -36,13 +40,17 @@ public class ExchangeConnectionTester {
         String ewsUrl = config.getExchangeEwsUrl();
         List<ConnectionResult> results = new ArrayList<>();
         if (ewsUrl == null || ewsUrl.isBlank()) {
+            log.warn("ExchangeTest: exchangeEwsUrl vacio en config");
             return results;
         }
         if (config.getMailboxes() == null) {
+            log.warn("ExchangeTest: no hay buzones configurados");
             return results;
         }
+        log.info("ExchangeTest: ewsUrl={}, mailboxes={}", ewsUrl, config.getMailboxes().size());
 
         for (MailboxEntry entry : config.getMailboxes()) {
+            log.info("ExchangeTest: POST mailbox={} id={} ewsUrl={}", entry.getDireccionCorreo(), entry.getId(), ewsUrl);
             results.add(request(entry, ewsUrl, bearerToken));
         }
 
@@ -58,13 +66,33 @@ public class ExchangeConnectionTester {
         HttpEntity<String> entity = new HttpEntity<>(SOAP_TEMPLATE, headers);
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(ewsUrl, entity, String.class);
+            log.info("ExchangeTest: mailbox={} status={} body={}", entry.getDireccionCorreo(), response.getStatusCode(),
+                    truncate(response.getBody(), 500));
             if (response.getStatusCode().is2xxSuccessful()) {
                 return new ConnectionResult(entry.getId(), entry.getNombre(), entry.getDireccionCorreo(), "ok", null);
             }
             return new ConnectionResult(entry.getId(), entry.getNombre(), entry.getDireccionCorreo(), "error",
                     "Status " + response.getStatusCode());
         } catch (RestClientException ex) {
+            log.error("ExchangeTest: mailbox={} error={}", entry.getDireccionCorreo(), describeException(ex));
             return new ConnectionResult(entry.getId(), entry.getNombre(), entry.getDireccionCorreo(), "error", ex.getMessage());
         }
+    }
+
+    private String describeException(Exception ex) {
+        if (ex instanceof HttpStatusCodeException httpEx) {
+            return "status=" + httpEx.getStatusCode() + ", body=" + truncate(httpEx.getResponseBodyAsString(), 1000);
+        }
+        return ex.getMessage();
+    }
+
+    private String truncate(String value, int max) {
+        if (value == null) {
+            return "<sin cuerpo>";
+        }
+        if (value.length() <= max) {
+            return value;
+        }
+        return value.substring(0, max) + "...";
     }
 }

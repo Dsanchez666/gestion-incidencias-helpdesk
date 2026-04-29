@@ -1,5 +1,6 @@
 package com.company.backendinc.auth;
 
+import com.company.backendinc.auth.application.AuthenticateUserUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,8 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    private static final String ROOT_USER = "root";
-    private static final String ROOT_PASS = "root";
+    private final AuthenticateUserUseCase authenticateUserUseCase;
+
+    public AuthController(AuthenticateUserUseCase authenticateUserUseCase) {
+        this.authenticateUserUseCase = authenticateUserUseCase;
+    }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
@@ -19,10 +23,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
-        if (ROOT_USER.equals(request.getUsername()) && ROOT_PASS.equals(request.getPassword())) {
-            return ResponseEntity.ok(new LoginResponse(request.getUsername(), "login ok"));
-        }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return authenticateUserUseCase.authenticate(request)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 }

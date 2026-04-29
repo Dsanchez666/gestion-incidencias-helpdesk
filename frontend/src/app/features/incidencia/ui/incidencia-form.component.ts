@@ -3,9 +3,9 @@ import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CreateIncidenciaUseCase } from '../application/create-incidencia.usecase';
-import { IncidenciaApiService } from '../infrastructure/incidencia-api.service';
+import { ListIncidenciasUseCase } from '../application/list-incidencias.usecase';
 import { Incidencia } from '../domain/incidencia.model';
-import { AuthService } from '../../../core/auth/auth.service';
+import { LogoutUseCase } from '../../../core/auth/application/logout.usecase';
 
 @Component({
   selector: 'app-incidencia-form',
@@ -21,8 +21,8 @@ export class IncidenciaFormComponent {
 
   constructor(
     private createIncidenciaUseCase: CreateIncidenciaUseCase,
-    private api: IncidenciaApiService,
-    private authService: AuthService,
+    private listIncidenciasUseCase: ListIncidenciasUseCase,
+    private logoutUseCase: LogoutUseCase,
     private router: Router
   ) {
     this.refresh();
@@ -42,7 +42,7 @@ export class IncidenciaFormComponent {
   }
 
   refresh(): void {
-    this.api.list().subscribe({
+    this.listIncidenciasUseCase.execute().subscribe({
       next: (data: Incidencia[]) => {
         this.incidencias = data;
       },
@@ -57,7 +57,7 @@ export class IncidenciaFormComponent {
   }
 
   logout(): void {
-    this.authService.logout();
+    this.logoutUseCase.execute();
     this.router.navigateByUrl('/login');
   }
 }

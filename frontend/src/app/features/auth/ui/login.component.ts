@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
-import { AuthService } from '../../../core/auth/auth.service';
+import { LoginUseCase } from '../../../core/auth/application/login.usecase';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +18,7 @@ export class LoginComponent {
   isLoading = false;
 
   constructor(
-    private authService: AuthService,
+    private loginUseCase: LoginUseCase,
     private router: Router
   ) {}
 
@@ -26,7 +26,7 @@ export class LoginComponent {
     this.error = '';
     this.isLoading = true;
 
-    this.authService.login(this.username, this.password).subscribe({
+    this.loginUseCase.execute(this.username, this.password).subscribe({
       next: () => {
         this.isLoading = false;
         this.router.navigateByUrl('/buzones');
