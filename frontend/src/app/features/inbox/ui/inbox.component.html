@@ -1,46 +1,128 @@
-<section class="toolbar">
-  <h1>Bandeja de entrada</h1>
-  <div class="actions">
-    <button class="secondary" (click)="refresh()">Recargar</button>
-    <button class="danger" (click)="logout()">Cerrar sesión</button>
-  </div>
-</section>
+<main class="inbox-shell">
+  <header class="top-header">
+    <div>
+      <h1>{{ context.appName }}</h1>
+      <p>Buzon: <strong>{{ context.mailboxNombre }}</strong> ({{ context.mailboxCorreo }})</p>
+    </div>
+    <div class="user-box">
+      <p>Usuario: {{ context.usuarioConectado }}</p>
+      <p>Perfil: <strong>{{ context.perfil }}</strong></p>
+      <p>Permisos: {{ context.permisos }}</p>
+      <button class="danger" (click)="logout()">Sign-out</button>
+    </div>
+  </header>
 
-<section *ngIf="loading" class="notice">Cargando correos recibidos...</section>
-<section *ngIf="error" class="error">{{ error }}</section>
+  <section class="filters-row" *ngIf="context.puedeVerCorreos">
+    <div class="global-filter-line">
+      <label><input type="checkbox" [(ngModel)]="hideAutomatic" /> Ocultar correos Automaticos</label>
+      <input placeholder="Filtro global..." [(ngModel)]="filters.generic" />
+      <button class="secondary" (click)="refresh()">Recargar</button>
+    </div>
+    <div class="field-filters-line">
+      <input placeholder="Filtro remitente" [(ngModel)]="filters.sender" />
+      <input placeholder="Filtro subject" [(ngModel)]="filters.subject" />
+      <input placeholder="Filtro resumen" [(ngModel)]="filters.summary" />
+      <input placeholder="Filtro tecnico" [(ngModel)]="filters.tecnico" />
+    </div>
+  </section>
 
-<section class="table-wrap" *ngIf="!loading && !error">
-  <table>
-    <thead>
-      <tr>
-        <th>Recepción</th>
-        <th>Usuario envío</th>
-        <th>Subject</th>
-        <th>Resumen</th>
-        <th>Incidencia</th>
-        <th>Asignada</th>
-        <th>Técnico</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let item of items">
-        <td>{{ item.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
-        <td>{{ item.sender }}</td>
-        <td>{{ item.subject }}</td>
-        <td>{{ item.summary }}</td>
-        <td>
-          <input type="checkbox" [(ngModel)]="item.incidenciaGenerada" (change)="onIncidenciaChange(item)" />
-        </td>
-        <td>
-          <input type="checkbox" [(ngModel)]="item.asignada" (change)="onAsignacionChange(item)" />
-        </td>
-        <td>
-          <select [(ngModel)]="item.tecnicoAsignado" [disabled]="!item.asignada" (change)="onAsignacionChange(item)">
-            <option value="">Sin asignar</option>
-            <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
-          </select>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</section>
+  <section class="pending-panel" *ngIf="context.puedeVerCorreos">
+    <h2>Correos pendientes de convertir en incidencia ({{ pendingShownCount }}/{{ pendingTotalCount }} mostrados)</h2>
+    <div class="bulk-row">
+      <select [(ngModel)]="bulkTecnicoNombre">
+        <option value="">Asignar seleccionados a tecnico...</option>
+        <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+      </select>
+      <button class="secondary" (click)="assignSelectedIncidencias()">Asignar seleccionados</button>
+    </div>
+    <section *ngIf="loading" class="notice">Cargando correos recibidos...</section>
+    <section *ngIf="error" class="error">{{ error }}</section>
+    <div class="table-wrap" *ngIf="!loading && !error">
+      <table>
+        <thead>
+          <tr>
+            <th>Sel</th>
+            <th class="sortable" (click)="togglePendingSort('receivedDateTime')">Recepcion</th>
+            <th class="sortable" (click)="togglePendingSort('sender')">Usuario envio</th>
+            <th class="sortable" (click)="togglePendingSort('subject')">Subject</th>
+            <th class="sortable" (click)="togglePendingSort('summary')">Resumen</th>
+            <th>Tecnico</th>
+            <th>Asignar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of pendingItems">
+            <td>
+              <input
+                type="checkbox"
+                [checked]="selectedMessageIds.has(item.messageId)"
+                (change)="toggleSelectMessage(item.messageId, $any($event.target).checked)"
+              />
+            </td>
+            <td>{{ item.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ item.sender }}</td>
+            <td>{{ item.subject }}</td>
+            <td>{{ item.summary }}</td>
+            <td>
+              <select [(ngModel)]="selectedTecnicoByMessageId[item.messageId]">
+                <option value="">Seleccionar tecnico</option>
+                <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+              </select>
+            </td>
+            <td>
+              <button
+                class="plus"
+                [disabled]="!selectedTecnicoByMessageId[item.messageId] || assigningByMessageId[item.messageId]"
+                (click)="assignIncidencia(item)"
+              >
+                +
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="incidencias-panel" [class.full-height]="!context.puedeVerCorreos">
+    <div class="inc-head">
+      <h2>Incidencias asignadas ({{ incidenciasShownCount }}/{{ incidenciasTotalCount }} mostradas)</h2>
+      <div class="inc-actions">
+        <button class="secondary" (click)="categorizarAutomatico()">Categorización Automática</button>
+        <button class="secondary" [disabled]="savingCategorias" (click)="saveCategoriasPendientes()">
+          {{ savingCategorias ? 'Guardando...' : 'Guardar Categorización' }}
+        </button>
+      </div>
+    </div>
+    <p *ngIf="!context.puedeVerCorreos" class="notice">Perfil {{ context.perfil }}: vista solo de incidencias asignadas.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" (click)="toggleIncidenciasSort('receivedDateTime')">Fecha recepcion</th>
+            <th class="sortable" (click)="toggleIncidenciasSort('sender')">Remitente</th>
+            <th class="sortable" (click)="toggleIncidenciasSort('subject')">Subject</th>
+            <th class="sortable" (click)="toggleIncidenciasSort('tecnicoAsignado')">Tecnico</th>
+            <th>Categoría</th>
+            <th class="sortable" (click)="toggleIncidenciasSort('assignedAt')">Fecha asignacion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let inc of sortedIncidencias">
+            <td>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ inc.sender }}</td>
+            <td>{{ inc.subject }}</td>
+            <td>{{ inc.tecnicoAsignado }}</td>
+            <td>
+              <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]">
+                <option [ngValue]="null">Sin categoría</option>
+                <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.abreviatura }}</option>
+              </select>
+            </td>
+            <td>{{ inc.assignedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
