@@ -1,20 +1,10 @@
 <section class="startup-layout">
   <article class="startup-card">
-    <h1>Acceso Delegado Entra ID</h1>
+    <h1>Autenticación MFA</h1>
     <p>{{ statusMessage }}</p>
-
     <div class="status" [class.error]="hasError">
       <span class="dot"></span>
-      <span>{{ hasError ? 'Error de autenticación' : 'Esperando login interactivo' }}</span>
-    </div>
-
-    <div class="credential-form">
-      <button type="button" (click)="iniciarSesionMicrosoft()" [disabled]="isLoading">
-        Iniciar Sesión con Microsoft
-      </button>
-      <button type="button" class="secondary" (click)="comprobarEstadoLogin()" [disabled]="isLoading">
-        {{ isLoading ? 'Comprobando...' : 'Ya inicié sesión, comprobar estado' }}
-      </button>
+      <span>{{ hasError ? 'Error de autenticación' : 'Proceso automático en curso' }}</span>
     </div>
   </article>
 </section>

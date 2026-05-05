@@ -8,6 +8,8 @@ import { IncidenciaFormComponent } from './app/features/incidencia/ui/incidencia
 import { LoginComponent } from './app/features/auth/ui/login.component';
 import { StartupComponent } from './app/features/auth/ui/startup.component';
 import { MailboxListComponent } from './app/features/mailbox/ui/mailbox-list.component';
+import { SplashComponent } from './app/features/splash/ui/splash.component';
+import { InboxComponent } from './app/features/inbox/ui/inbox.component';
 import { authGuard } from './app/core/auth/auth.guard';
 import { authInterceptor } from './app/core/auth/auth.interceptor';
 import { AuthService } from './app/core/auth/auth.service';
@@ -22,9 +24,11 @@ import { MailboxApiService } from './app/features/mailbox/infrastructure/mailbox
 import { MAILBOX_API_PORT } from './app/features/mailbox/application/port/out/mailbox-api.port';
 
 const routes: Routes = [
-  { path: '', component: StartupComponent },
+  { path: '', component: SplashComponent },
+  { path: 'startup', component: StartupComponent },
   { path: 'login', component: LoginComponent },
   { path: 'buzones', component: MailboxListComponent, canActivate: [authGuard] },
+  { path: 'inbox', component: InboxComponent, canActivate: [authGuard] },
   { path: 'incidencias', component: IncidenciaFormComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' }
 ];

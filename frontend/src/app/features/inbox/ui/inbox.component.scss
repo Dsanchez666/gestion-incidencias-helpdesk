@@ -1,0 +1,60 @@
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 20px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.secondary {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.danger {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.notice,
+.error {
+  margin: 0 20px 12px;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.table-wrap {
+  margin: 0 20px 24px;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  border: 1px solid #dbe3ef;
+  padding: 8px;
+  text-align: left;
+}
+
+select {
+  width: 100%;
+  min-width: 140px;
+}

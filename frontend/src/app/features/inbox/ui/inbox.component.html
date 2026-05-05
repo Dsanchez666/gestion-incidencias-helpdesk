@@ -1,0 +1,46 @@
+<section class="toolbar">
+  <h1>Bandeja de entrada</h1>
+  <div class="actions">
+    <button class="secondary" (click)="refresh()">Recargar</button>
+    <button class="danger" (click)="logout()">Cerrar sesión</button>
+  </div>
+</section>
+
+<section *ngIf="loading" class="notice">Cargando correos recibidos...</section>
+<section *ngIf="error" class="error">{{ error }}</section>
+
+<section class="table-wrap" *ngIf="!loading && !error">
+  <table>
+    <thead>
+      <tr>
+        <th>Recepción</th>
+        <th>Usuario envío</th>
+        <th>Subject</th>
+        <th>Resumen</th>
+        <th>Incidencia</th>
+        <th>Asignada</th>
+        <th>Técnico</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let item of items">
+        <td>{{ item.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
+        <td>{{ item.sender }}</td>
+        <td>{{ item.subject }}</td>
+        <td>{{ item.summary }}</td>
+        <td>
+          <input type="checkbox" [(ngModel)]="item.incidenciaGenerada" (change)="onIncidenciaChange(item)" />
+        </td>
+        <td>
+          <input type="checkbox" [(ngModel)]="item.asignada" (change)="onAsignacionChange(item)" />
+        </td>
+        <td>
+          <select [(ngModel)]="item.tecnicoAsignado" [disabled]="!item.asignada" (change)="onAsignacionChange(item)">
+            <option value="">Sin asignar</option>
+            <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+          </select>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
