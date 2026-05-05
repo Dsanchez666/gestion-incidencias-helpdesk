@@ -1,79 +1,63 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { NgIf } from '@angular/common';
-import { LogoutUseCase } from '../../../core/auth/application/logout.usecase';
 import { AuthService } from '../../../core/auth/auth.service';
+import { TraceGraphUserUseCase } from '../../mailbox/application/trace-graph-user.usecase';
 
 @Component({
   selector: 'app-startup',
   standalone: true,
-  imports: [NgIf],
   templateUrl: './startup.component.html',
   styleUrl: './startup.component.scss'
 })
 export class StartupComponent {
-  statusMessage = 'Este tenant exige MFA. Inicia sesión con Microsoft para continuar.';
+  statusMessage = 'Verificando sesión en Microsoft Entra ID...';
   hasError = false;
-  isLoading = false;
   readonly loginUrl = 'http://localhost:4000/api/auth/entra/login';
   readonly statusUrl = 'http://localhost:4000/api/auth/entra/status';
 
   constructor(
-    private logoutUseCase: LogoutUseCase,
     private authService: AuthService,
     private http: HttpClient,
+    private traceGraphUserUseCase: TraceGraphUserUseCase,
     private router: Router
   ) {
-    console.info('Startup: comprobando si ya existe sesión interactiva en backend');
-    this.comprobarEstadoLoginSilencioso();
+    this.start();
   }
 
-  iniciarSesionMicrosoft(): void {
-    this.hasError = false;
-    this.statusMessage = 'Redirigiendo a Microsoft Entra ID...';
-    console.info('Startup: redirigiendo a login interactivo', { loginUrl: this.loginUrl });
-    window.location.href = this.loginUrl;
-  }
-
-  comprobarEstadoLogin(): void {
-    this.hasError = false;
-    this.isLoading = true;
-    this.statusMessage = 'Comprobando sesión interactiva en backend...';
-    this.http.get<{ loggedIn: boolean; account?: string | null }>(this.statusUrl).subscribe({
+  private start(): void {
+    this.http.get<{ loggedIn: boolean }>(this.statusUrl).subscribe({
       next: (response) => {
-        this.isLoading = false;
-        console.info('Startup: estado sesión interactiva', response);
         if (response.loggedIn) {
           this.authService.setToken(`entra-interactive-${Date.now()}`);
-          this.statusMessage = 'Sesión activa. Accediendo a buzones...';
-          this.router.navigateByUrl('/buzones');
+          this.statusMessage = 'Sesion verificada. Cargando carpetas de usuario...';
+          this.loadUserFoldersAndGoInbox();
           return;
         }
-        this.hasError = true;
-        this.statusMessage = 'No hay sesión interactiva todavía. Completa el login y vuelve a comprobar.';
+        this.statusMessage = 'Redirigiendo a autenticación MFA...';
+        window.location.href = this.loginUrl;
       },
-      error: (error) => {
-        this.isLoading = false;
+      error: () => {
         this.hasError = true;
-        this.statusMessage = 'No se pudo comprobar el estado del login interactivo.';
-        console.error('Startup: error comprobando estado interactivo', error);
+        this.statusMessage = 'No se pudo comprobar el estado de autenticación.';
       }
     });
   }
 
-  private comprobarEstadoLoginSilencioso(): void {
-    this.http.get<{ loggedIn: boolean; account?: string | null }>(this.statusUrl).subscribe({
-      next: (response) => {
-        console.info('Startup: estado silencioso', response);
-        if (response.loggedIn) {
-          this.authService.setToken(`entra-interactive-${Date.now()}`);
-          this.statusMessage = 'Sesión detectada. Accediendo a buzones...';
-          this.router.navigateByUrl('/buzones');
+  private loadUserFoldersAndGoInbox(): void {
+    this.traceGraphUserUseCase.execute().subscribe({
+      next: (trace) => {
+        if (!trace.success) {
+          this.hasError = true;
+          this.statusMessage = trace.error ?? 'Autenticado, pero no se pudieron cargar carpetas de usuario.';
+          return;
         }
+        this.statusMessage = 'Carpetas cargadas. Abriendo bandeja de entrada...';
+        this.router.navigateByUrl('/inbox');
       },
-      error: (error) => {
-        console.warn('Startup: no se pudo comprobar estado silencioso', error);
+      error: () => {
+        this.hasError = true;
+        this.statusMessage = 'Autenticado, pero fallo la carga de carpetas de usuario.';
       }
     });
   }

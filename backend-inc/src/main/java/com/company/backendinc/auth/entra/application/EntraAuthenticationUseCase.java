@@ -146,7 +146,7 @@ public class EntraAuthenticationUseCase {
         sessionStorePort.setToken(tokenResult.accessToken(), expiresAt, tokenResult.refreshToken(), null);
         log.info("Entra callback: token almacenado (expiresIn={}s)", expiresIn);
 
-        return new UseCaseResult<>(200, renderCallbackPage(true, "Login correcto. Ya puedes volver a la app."));
+        return new UseCaseResult<>(200, renderCallbackPage(true, "Login correcto. Redirigiendo a la app..."));
     }
 
     public Map<String, Object> status() {
@@ -226,8 +226,11 @@ public class EntraAuthenticationUseCase {
                   <div class="box">
                     <h2 class="%s">%s</h2>
                     <p>%s</p>
-                    <p>Puedes volver a la aplicacion: <a href="http://localhost:3000/">Volver a la App</a></p>
+                    <p>Redirección automática en 1 segundo: <a href="http://localhost:3000/startup">Abrir app</a></p>
                   </div>
+                  <script>
+                    setTimeout(function () { window.location.href = "http://localhost:3000/startup"; }, 1000);
+                  </script>
                 </body>
                 </html>
                 """;
