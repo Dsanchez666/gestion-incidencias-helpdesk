@@ -1,17 +1,26 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { InboxItem, Tecnico } from '../domain/inbox.model';
+import { Categoria, InboxContext, InboxItem, IncidenciaInboxItem, Tecnico } from '../domain/inbox.model';
 
 @Injectable({ providedIn: 'root' })
 export class InboxApiService {
   private readonly inboxUrl = 'http://localhost:4000/api/inbox/gestion';
   private readonly tecnicosUrl = 'http://localhost:4000/api/tecnicos';
+  private readonly categoriasUrl = 'http://localhost:4000/api/categorias';
 
   constructor(private http: HttpClient) {}
 
   list(summaryLength: number): Observable<InboxItem[]> {
     return this.http.get<InboxItem[]>(`${this.inboxUrl}?summaryLength=${summaryLength}`);
+  }
+
+  context(): Observable<InboxContext> {
+    return this.http.get<InboxContext>(`${this.inboxUrl}/context`);
+  }
+
+  listIncidencias(): Observable<IncidenciaInboxItem[]> {
+    return this.http.get<IncidenciaInboxItem[]>(`${this.inboxUrl}/incidencias`);
   }
 
   updateIncidencia(messageId: string, incidenciaGenerada: boolean): Observable<void> {
@@ -29,5 +38,27 @@ export class InboxApiService {
 
   listTecnicos(): Observable<Tecnico[]> {
     return this.http.get<Tecnico[]>(this.tecnicosUrl);
+  }
+
+  assignIncidencia(messageId: string, tecnicoNombre: string, summaryLength: number): Observable<void> {
+    return this.http.post<void>(
+      `${this.inboxUrl}/${encodeURIComponent(messageId)}/asignar-incidencia?summaryLength=${summaryLength}`,
+      { tecnicoNombre }
+    );
+  }
+
+  assignIncidencias(messageIds: string[], tecnicoNombre: string, summaryLength: number): Observable<void> {
+    return this.http.post<void>(`${this.inboxUrl}/asignar-incidencias?summaryLength=${summaryLength}`, {
+      messageIds,
+      tecnicoNombre
+    });
+  }
+
+  listCategorias(): Observable<Categoria[]> {
+    return this.http.get<Categoria[]>(this.categoriasUrl);
+  }
+
+  updateCategoria(incidenciaId: number, categoriaId: number): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/categoria`, { categoriaId });
   }
 }

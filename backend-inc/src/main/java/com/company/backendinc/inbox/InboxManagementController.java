@@ -3,8 +3,10 @@ package com.company.backendinc.inbox;
 import com.company.backendinc.inbox.application.InboxManagementUseCase;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +29,16 @@ public class InboxManagementController {
         return ResponseEntity.ok(useCase.listInbox(summaryLength));
     }
 
+    @GetMapping("/context")
+    public ResponseEntity<InboxContext> context() throws IOException {
+        return ResponseEntity.ok(useCase.getContext());
+    }
+
+    @GetMapping("/incidencias")
+    public ResponseEntity<List<IncidenciaInboxItem>> incidencias() {
+        return ResponseEntity.ok(useCase.listIncidencias());
+    }
+
     @PatchMapping("/{messageId}/incidencia")
     public ResponseEntity<Void> updateIncidencia(@PathVariable String messageId,
             @RequestBody IncidenciaUpdateRequest request) {
@@ -39,5 +51,39 @@ public class InboxManagementController {
             @RequestBody AsignacionUpdateRequest request) {
         useCase.updateAsignacion(messageId, request.isAsignada(), request.getTecnicoAsignado());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{messageId}/asignar-incidencia")
+    public ResponseEntity<Void> assignIncidencia(@PathVariable String messageId,
+            @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
+            @RequestBody AsignarIncidenciaRequest request) throws IOException {
+        try {
+            useCase.assignIncidencia(messageId, request.getTecnicoNombre(), summaryLength);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PostMapping("/asignar-incidencias")
+    public ResponseEntity<Void> assignIncidencias(
+            @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
+            @RequestBody AsignarIncidenciasRequest request) throws IOException {
+        try {
+            useCase.assignIncidencias(request.getMessageIds(), request.getTecnicoNombre(), summaryLength);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/categoria")
+    public ResponseEntity<Void> updateCategoria(@PathVariable Long incidenciaId, @RequestBody CategoriaUpdateRequest request) {
+        try {
+            useCase.updateCategoria(incidenciaId, request.getCategoriaId());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
     }
 }

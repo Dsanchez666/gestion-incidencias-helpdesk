@@ -5,3 +5,15 @@ spring:
     url: jdbc:mysql://localhost:3306/GestionIncidencias?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: GestorIncidencias
     password: Gestor123
+  mail:
+    host: localhost
+    port: 25
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+app:
+  notifications:
+    from: no-reply@gestion-incidencias.local

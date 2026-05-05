@@ -1,0 +1,53 @@
+USE GestionIncidencias;
+
+ALTER TABLE tecnico
+  ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL;
+
+UPDATE tecnico
+SET email = CONCAT(REPLACE(LOWER(nombre), ' ', ''), '@enaire.es')
+WHERE email IS NULL OR email = '';
+
+ALTER TABLE tecnico
+  MODIFY COLUMN email VARCHAR(255) NOT NULL;
+
+CREATE TABLE IF NOT EXISTS incidencia_inbox (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  message_id VARCHAR(255) NOT NULL,
+  mailbox VARCHAR(255) NOT NULL,
+  received_date_time VARCHAR(100) NOT NULL,
+  sender VARCHAR(255) NOT NULL,
+  subject VARCHAR(500) NOT NULL,
+  summary VARCHAR(1000) NOT NULL,
+  tecnico_asignado VARCHAR(150) NOT NULL,
+  tecnico_email VARCHAR(255) NOT NULL,
+  categoria_id BIGINT NULL,
+  assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_incidencia_inbox_message (message_id)
+);
+
+ALTER TABLE incidencia_inbox
+  ADD COLUMN IF NOT EXISTS categoria_id BIGINT NULL;
+
+CREATE TABLE IF NOT EXISTS categoria (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(150) NOT NULL,
+  abreviatura VARCHAR(20) NOT NULL,
+  UNIQUE KEY uq_categoria_nombre (nombre),
+  UNIQUE KEY uq_categoria_abreviatura (abreviatura)
+);
+
+INSERT INTO categoria (nombre, abreviatura)
+SELECT 'Infraestructura', 'INF'
+WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'INF');
+
+INSERT INTO categoria (nombre, abreviatura)
+SELECT 'Aplicaciones', 'APP'
+WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'APP');
+
+INSERT INTO categoria (nombre, abreviatura)
+SELECT 'Seguridad', 'SEG'
+WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'SEG');
+
+INSERT INTO categoria (nombre, abreviatura)
+SELECT 'Comunicaciones', 'COM'
+WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'COM');
