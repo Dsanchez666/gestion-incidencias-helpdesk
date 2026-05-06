@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS incidencia_inbox (
   tecnico_asignado VARCHAR(150) NOT NULL,
   tecnico_email VARCHAR(255) NOT NULL,
   categoria_id BIGINT NULL,
+  resuelta BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at TIMESTAMP NULL,
   assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_incidencia_inbox_message (message_id)
 );
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS categoria (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
   abreviatura VARCHAR(20) NOT NULL,
+  color_hex VARCHAR(20) NOT NULL DEFAULT '#f3f4f6',
   UNIQUE KEY uq_categoria_nombre (nombre),
   UNIQUE KEY uq_categoria_abreviatura (abreviatura)
 );

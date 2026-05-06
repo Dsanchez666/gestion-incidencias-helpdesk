@@ -86,4 +86,25 @@ public class InboxManagementController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
+
+    @PatchMapping("/incidencias/{incidenciaId}/tecnico")
+    public ResponseEntity<Void> updateTecnico(@PathVariable Long incidenciaId, @RequestBody TecnicoIncidenciaUpdateRequest request) {
+        try {
+            useCase.updateTecnicoIncidencia(incidenciaId, request.getTecnicoNombre());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/resuelta")
+    public ResponseEntity<Void> updateResuelta(@PathVariable Long incidenciaId, @RequestBody ResueltaUpdateRequest request) {
+        useCase.updateResuelta(incidenciaId, request.isResuelta());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/incidencias/stats")
+    public ResponseEntity<IncidenciasStatsResponse> stats() {
+        return ResponseEntity.ok(useCase.getStats());
+    }
 }

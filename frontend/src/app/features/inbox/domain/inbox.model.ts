@@ -38,6 +38,8 @@ export interface IncidenciaInboxItem {
   tecnicoEmail: string;
   categoriaId?: number | null;
   categoriaAbreviatura?: string | null;
+  categoriaColorHex?: string | null;
+  resuelta: boolean;
   assignedAt: string;
 }
 
@@ -45,4 +47,35 @@ export interface Categoria {
   id: number;
   nombre: string;
   abreviatura: string;
+  colorHex: string;
+}
+
+export interface IncidenciasStatsResponse {
+  currentMonth: string;
+  previousMonth: string;
+  categorias: {
+    categoriaAbreviatura: string;
+    categoriaNombre: string;
+    actualTotal: number;
+    actualResueltas: number;
+    actualSinResolver: number;
+    anteriorTotal: number;
+    anteriorResueltas: number;
+    anteriorSinResolver: number;
+  }[];
+  tecnicos: {
+    tecnicoNombre: string;
+    actualAsignadas: number;
+    actualResueltas: number;
+    anteriorAsignadas: number;
+    anteriorResueltas: number;
+  }[];
+  totalizador: {
+    actualTotal: number;
+    actualResueltas: number;
+    actualSinResolver: number;
+    anteriorTotal: number;
+    anteriorResueltas: number;
+    anteriorSinResolver: number;
+  };
 }

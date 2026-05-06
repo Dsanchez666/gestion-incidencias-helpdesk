@@ -5,8 +5,8 @@ INSERT INTO tecnico (nombre, email, activo) VALUES
 ('Tecnico 2', 'tecnico2@enaire.es', TRUE),
 ('Tecnico 3', 'tecnico3@enaire.es', TRUE);
 
-INSERT INTO categoria (nombre, abreviatura) VALUES
-('Infraestructura', 'INF'),
-('Aplicaciones', 'APP'),
-('Seguridad', 'SEG'),
-('Comunicaciones', 'COM');
+INSERT INTO categoria (nombre, abreviatura, color_hex) VALUES
+('Infraestructura', 'INF', '#fef3c7'),
+('Aplicaciones', 'APP', '#dbeafe'),
+('Seguridad', 'SEG', '#fee2e2'),
+('Comunicaciones', 'COM', '#dcfce7');

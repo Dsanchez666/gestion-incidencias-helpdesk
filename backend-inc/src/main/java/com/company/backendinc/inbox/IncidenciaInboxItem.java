@@ -12,13 +12,15 @@ public class IncidenciaInboxItem {
     private String tecnicoEmail;
     private Long categoriaId;
     private String categoriaAbreviatura;
+    private String categoriaColorHex;
+    private boolean resuelta;
     private String assignedAt;
 
     public IncidenciaInboxItem() {}
 
     public IncidenciaInboxItem(Long id, String messageId, String mailbox, String receivedDateTime, String sender, String subject,
-            String summary, String tecnicoAsignado, String tecnicoEmail, Long categoriaId, String categoriaAbreviatura,
-            String assignedAt) {
+            String summary, String tecnicoAsignado, String tecnicoEmail, Long categoriaId, String categoriaAbreviatura, String categoriaColorHex,
+            boolean resuelta, String assignedAt) {
         this.id = id;
         this.messageId = messageId;
         this.mailbox = mailbox;
@@ -30,6 +32,8 @@ public class IncidenciaInboxItem {
         this.tecnicoEmail = tecnicoEmail;
         this.categoriaId = categoriaId;
         this.categoriaAbreviatura = categoriaAbreviatura;
+        this.categoriaColorHex = categoriaColorHex;
+        this.resuelta = resuelta;
         this.assignedAt = assignedAt;
     }
 
@@ -44,5 +48,7 @@ public class IncidenciaInboxItem {
     public String getTecnicoEmail() { return tecnicoEmail; }
     public Long getCategoriaId() { return categoriaId; }
     public String getCategoriaAbreviatura() { return categoriaAbreviatura; }
+    public String getCategoriaColorHex() { return categoriaColorHex; }
+    public boolean isResuelta() { return resuelta; }
     public String getAssignedAt() { return assignedAt; }
 }

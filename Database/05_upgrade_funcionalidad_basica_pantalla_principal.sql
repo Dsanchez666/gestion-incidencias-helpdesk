@@ -21,33 +21,42 @@ CREATE TABLE IF NOT EXISTS incidencia_inbox (
   tecnico_asignado VARCHAR(150) NOT NULL,
   tecnico_email VARCHAR(255) NOT NULL,
   categoria_id BIGINT NULL,
+  resuelta BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at TIMESTAMP NULL,
   assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_incidencia_inbox_message (message_id)
 );
 
 ALTER TABLE incidencia_inbox
   ADD COLUMN IF NOT EXISTS categoria_id BIGINT NULL;
+ALTER TABLE incidencia_inbox
+  ADD COLUMN IF NOT EXISTS resuelta BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE incidencia_inbox
+  ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP NULL;
 
 CREATE TABLE IF NOT EXISTS categoria (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
   abreviatura VARCHAR(20) NOT NULL,
+  color_hex VARCHAR(20) NOT NULL DEFAULT '#f3f4f6',
   UNIQUE KEY uq_categoria_nombre (nombre),
   UNIQUE KEY uq_categoria_abreviatura (abreviatura)
 );
+ALTER TABLE categoria
+  ADD COLUMN IF NOT EXISTS color_hex VARCHAR(20) NOT NULL DEFAULT '#f3f4f6';
 
-INSERT INTO categoria (nombre, abreviatura)
-SELECT 'Infraestructura', 'INF'
+INSERT INTO categoria (nombre, abreviatura, color_hex)
+SELECT 'Infraestructura', 'INF', '#fef3c7'
 WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'INF');
 
-INSERT INTO categoria (nombre, abreviatura)
-SELECT 'Aplicaciones', 'APP'
+INSERT INTO categoria (nombre, abreviatura, color_hex)
+SELECT 'Aplicaciones', 'APP', '#dbeafe'
 WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'APP');
 
-INSERT INTO categoria (nombre, abreviatura)
-SELECT 'Seguridad', 'SEG'
+INSERT INTO categoria (nombre, abreviatura, color_hex)
+SELECT 'Seguridad', 'SEG', '#fee2e2'
 WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'SEG');
 
-INSERT INTO categoria (nombre, abreviatura)
-SELECT 'Comunicaciones', 'COM'
+INSERT INTO categoria (nombre, abreviatura, color_hex)
+SELECT 'Comunicaciones', 'COM', '#dcfce7'
 WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE abreviatura = 'COM');

@@ -70,13 +70,7 @@
               </select>
             </td>
             <td>
-              <button
-                class="plus"
-                [disabled]="!selectedTecnicoByMessageId[item.messageId] || assigningByMessageId[item.messageId]"
-                (click)="assignIncidencia(item)"
-              >
-                +
-              </button>
+              <button class="plus" [disabled]="!selectedTecnicoByMessageId[item.messageId] || assigningByMessageId[item.messageId]" (click)="assignIncidencia(item)">+</button>
             </td>
           </tr>
         </tbody>
@@ -89,40 +83,111 @@
       <h2>Incidencias asignadas ({{ incidenciasShownCount }}/{{ incidenciasTotalCount }} mostradas)</h2>
       <div class="inc-actions">
         <button class="secondary" (click)="categorizarAutomatico()">Categorización Automática</button>
-        <button class="secondary" [disabled]="savingCategorias" (click)="saveCategoriasPendientes()">
-          {{ savingCategorias ? 'Guardando...' : 'Guardar Categorización' }}
+        <button class="secondary" (click)="openStats()">Estadísticas</button>
+        <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('tecnico')">+ Técnico</button>
+        <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('categoria')">+ Categoría</button>
+        <button class="secondary" [disabled]="savingIncidencias" (click)="saveIncidenciasPendientes()">
+          {{ savingIncidencias ? 'Guardando...' : 'Guardar Cambios' }}
         </button>
       </div>
     </div>
+    <div class="inc-filter-row">
+      <input placeholder="Filtrar incidencias por texto libre..." [(ngModel)]="incidenciasTextFilter" />
+    </div>
     <p *ngIf="!context.puedeVerCorreos" class="notice">Perfil {{ context.perfil }}: vista solo de incidencias asignadas.</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="sortable" (click)="toggleIncidenciasSort('receivedDateTime')">Fecha recepcion</th>
-            <th class="sortable" (click)="toggleIncidenciasSort('sender')">Remitente</th>
-            <th class="sortable" (click)="toggleIncidenciasSort('subject')">Subject</th>
-            <th class="sortable" (click)="toggleIncidenciasSort('tecnicoAsignado')">Tecnico</th>
-            <th>Categoría</th>
-            <th class="sortable" (click)="toggleIncidenciasSort('assignedAt')">Fecha asignacion</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let inc of sortedIncidencias">
-            <td>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
-            <td>{{ inc.sender }}</td>
-            <td>{{ inc.subject }}</td>
-            <td>{{ inc.tecnicoAsignado }}</td>
-            <td>
-              <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]">
-                <option [ngValue]="null">Sin categoría</option>
-                <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.abreviatura }}</option>
-              </select>
-            </td>
-            <td>{{ inc.assignedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="cards-grid">
+      <article *ngFor="let inc of sortedIncidencias" class="inc-card" [ngClass]="categoryStyleClass(inc)" [ngStyle]="categoryStyle(inc)">
+        <header class="inc-card-head">
+          <strong>{{ inc.subject }}</strong>
+          <span class="mono">{{ inc.categoriaAbreviatura || 'N/A' }}</span>
+        </header>
+        <div class="inc-meta">
+          <span>{{ inc.sender }}</span>
+          <span>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="inc-controls">
+          <label>Técnico
+            <select [(ngModel)]="selectedTecnicoByIncidenciaId[inc.id]">
+              <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+            </select>
+          </label>
+          <label>Categoría
+            <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]">
+              <option [ngValue]="null">Sin categoría</option>
+              <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.abreviatura }}</option>
+            </select>
+          </label>
+          <button class="secondary icon-btn" *ngIf="context.perfil === 'ADMIN'" (click)="startEditCategoria(selectedCategoriaByIncidenciaId[inc.id])">✎</button>
+          <label class="checkline">
+            <input type="checkbox" [(ngModel)]="selectedResueltaByIncidenciaId[inc.id]" />
+            Resuelta
+          </label>
+        </div>
+      </article>
     </div>
   </section>
 </main>
+
+<section class="stats-modal" *ngIf="showStatsModal && stats">
+  <article class="stats-dialog">
+    <header>
+      <h3>Estadísticas</h3>
+      <button class="danger" (click)="closeStats()">Cerrar</button>
+    </header>
+    <p>Comparativa <strong>{{ stats.currentMonth }}</strong> vs <strong>{{ stats.previousMonth }}</strong></p>
+    <h4>Categorías (resueltas / sin resolver)</h4>
+    <table>
+      <thead><tr><th>Categoría</th><th>Actual</th><th>Anterior</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let c of stats.categorias">
+          <td>{{ c.categoriaAbreviatura }} - {{ c.categoriaNombre }}</td>
+          <td>{{ c.actualTotal }} ({{ c.actualResueltas }}/{{ c.actualSinResolver }})</td>
+          <td>{{ c.anteriorTotal }} ({{ c.anteriorResueltas }}/{{ c.anteriorSinResolver }})</td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Técnicos</h4>
+    <table>
+      <thead><tr><th>Técnico</th><th>Actual</th><th>Anterior</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let t of stats.tecnicos">
+          <td>{{ t.tecnicoNombre }}</td>
+          <td>Asignadas {{ t.actualAsignadas }} / Resueltas {{ t.actualResueltas }}</td>
+          <td>Asignadas {{ t.anteriorAsignadas }} / Resueltas {{ t.anteriorResueltas }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Totalizador</h4>
+    <p>Actual: {{ stats.totalizador.actualTotal }} ({{ stats.totalizador.actualResueltas }} resueltas / {{ stats.totalizador.actualSinResolver }} sin resolver)</p>
+    <p>Anterior: {{ stats.totalizador.anteriorTotal }} ({{ stats.totalizador.anteriorResueltas }} resueltas / {{ stats.totalizador.anteriorSinResolver }} sin resolver)</p>
+  </article>
+</section>
+
+<section class="admin-modal" *ngIf="showAdminModal && context.perfil === 'ADMIN'">
+  <article class="admin-dialog">
+    <header>
+      <h3>Configuración</h3>
+      <button class="danger" (click)="closeAdminModal()">Cerrar</button>
+    </header>
+    <div class="tabs">
+      <button class="secondary" (click)="adminTab = 'tecnico'">Técnicos</button>
+      <button class="secondary" (click)="adminTab = 'categoria'">Categorías</button>
+    </div>
+    <section *ngIf="adminTab === 'tecnico'" class="form-grid">
+      <input placeholder="Nombre técnico" [(ngModel)]="newTecnicoNombre" />
+      <input placeholder="Email técnico" [(ngModel)]="newTecnicoEmail" />
+      <button class="secondary" (click)="createTecnicoAdmin()">Crear Técnico</button>
+    </section>
+    <section *ngIf="adminTab === 'categoria'" class="form-grid">
+      <input placeholder="Nombre categoría" [(ngModel)]="newCategoriaNombre" />
+      <input placeholder="Abreviatura" [(ngModel)]="newCategoriaAbreviatura" />
+      <input type="color" [(ngModel)]="newCategoriaColorHex" />
+      <button class="secondary" (click)="createCategoriaAdmin()">Crear Categoría</button>
+      <hr />
+      <input placeholder="Editar nombre" [(ngModel)]="editCategoriaNombre" />
+      <input placeholder="Editar abreviatura" [(ngModel)]="editCategoriaAbreviatura" />
+      <input type="color" [(ngModel)]="editCategoriaColorHex" />
+      <button class="secondary" [disabled]="!editCategoriaId" (click)="saveEditCategoria()">Guardar Edición</button>
+    </section>
+  </article>
+</section>
