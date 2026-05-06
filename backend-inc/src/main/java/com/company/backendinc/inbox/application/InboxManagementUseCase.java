@@ -3,6 +3,7 @@ package com.company.backendinc.inbox.application;
 import com.company.backendinc.auth.entra.application.port.out.EntraSessionStorePort;
 import com.company.backendinc.categoria.Categoria;
 import com.company.backendinc.categoria.adapter.out.CategoriaRepository;
+import com.company.backendinc.inbox.IncidenciasStatsResponse;
 import com.company.backendinc.inbox.InboxItem;
 import com.company.backendinc.inbox.InboxContext;
 import com.company.backendinc.inbox.IncidenciaInboxItem;
@@ -18,7 +19,9 @@ import com.company.backendinc.tecnico.adapter.out.TecnicoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpEntity;
@@ -180,6 +183,8 @@ public class InboxManagementUseCase {
                 tecnico.getEmail(),
                 null,
                 null,
+                null,
+                false,
                 null);
         incidenciaInboxRepository.upsert(incidencia);
         notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender());
@@ -200,6 +205,91 @@ public class InboxManagementUseCase {
             throw new IllegalArgumentException("Categoria no valida");
         }
         incidenciaInboxRepository.updateCategoria(incidenciaId, categoriaId);
+    }
+
+    public void updateTecnicoIncidencia(Long incidenciaId, String tecnicoNombre) {
+        Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
+        if (tecnico == null) {
+            throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
+        }
+        incidenciaInboxRepository.updateTecnico(incidenciaId, tecnico.getNombre(), tecnico.getEmail());
+    }
+
+    public void updateResuelta(Long incidenciaId, boolean resuelta) {
+        incidenciaInboxRepository.updateResuelta(incidenciaId, resuelta);
+    }
+
+    public IncidenciasStatsResponse getStats() {
+        YearMonth current = YearMonth.now();
+        YearMonth previous = current.minusMonths(1);
+
+        List<Map<String, Object>> currentCat = incidenciaInboxRepository.categoryStatsByAssignedMonth(current);
+        List<Map<String, Object>> previousCat = incidenciaInboxRepository.categoryStatsByAssignedMonth(previous);
+
+        Map<String, IncidenciasStatsResponse.CategoryStatsItem> merged = new HashMap<>();
+        for (Map<String, Object> row : currentCat) {
+            String abrv = String.valueOf(row.get("abrv"));
+            String nombre = String.valueOf(row.get("nombre"));
+            long total = ((Number) row.get("total")).longValue();
+            long resueltas = ((Number) row.get("resueltas")).longValue();
+            merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, total, resueltas, total - resueltas, 0, 0, 0));
+        }
+        for (Map<String, Object> row : previousCat) {
+            String abrv = String.valueOf(row.get("abrv"));
+            String nombre = String.valueOf(row.get("nombre"));
+            long total = ((Number) row.get("total")).longValue();
+            long resueltas = ((Number) row.get("resueltas")).longValue();
+            IncidenciasStatsResponse.CategoryStatsItem existing = merged.get(abrv);
+            if (existing == null) {
+                merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, 0, 0, 0, total, resueltas, total - resueltas));
+            } else {
+                merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(
+                        existing.categoriaAbreviatura(), existing.categoriaNombre(),
+                        existing.actualTotal(), existing.actualResueltas(), existing.actualSinResolver(),
+                        total, resueltas, total - resueltas));
+            }
+        }
+
+        Map<String, Long> currentAssigned = toMap(incidenciaInboxRepository.technicianAssignedStats(current), "asignadas");
+        Map<String, Long> previousAssigned = toMap(incidenciaInboxRepository.technicianAssignedStats(previous), "asignadas");
+        Map<String, Long> currentResolved = toMap(incidenciaInboxRepository.technicianResolvedStats(current), "resueltas");
+        Map<String, Long> previousResolved = toMap(incidenciaInboxRepository.technicianResolvedStats(previous), "resueltas");
+
+        Map<String, IncidenciasStatsResponse.TechnicianStatsItem> techMerged = new HashMap<>();
+        for (String tech : currentAssigned.keySet()) {
+            techMerged.put(tech, new IncidenciasStatsResponse.TechnicianStatsItem(
+                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L),
+                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L)));
+        }
+        for (String tech : previousAssigned.keySet()) {
+            techMerged.putIfAbsent(tech, new IncidenciasStatsResponse.TechnicianStatsItem(
+                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L),
+                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L)));
+        }
+
+        long currentTotal = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::actualTotal).sum();
+        long currentRes = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::actualResueltas).sum();
+        long prevTotal = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::anteriorTotal).sum();
+        long prevRes = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::anteriorResueltas).sum();
+
+        IncidenciasStatsResponse.TotalsStatsItem totals = new IncidenciasStatsResponse.TotalsStatsItem(
+                currentTotal, currentRes, currentTotal - currentRes,
+                prevTotal, prevRes, prevTotal - prevRes);
+
+        return new IncidenciasStatsResponse(
+                current.toString(),
+                previous.toString(),
+                new ArrayList<>(merged.values()),
+                new ArrayList<>(techMerged.values()),
+                totals);
+    }
+
+    private Map<String, Long> toMap(List<Map<String, Object>> rows, String key) {
+        Map<String, Long> out = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            out.put(String.valueOf(row.get("tecnico")), ((Number) row.get(key)).longValue());
+        }
+        return out;
     }
 
     public List<IncidenciaInboxItem> listIncidencias() {

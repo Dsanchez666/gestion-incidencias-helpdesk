@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Categoria, InboxContext, InboxItem, IncidenciaInboxItem, Tecnico } from '../domain/inbox.model';
+import { Categoria, InboxContext, InboxItem, IncidenciaInboxItem, IncidenciasStatsResponse, Tecnico } from '../domain/inbox.model';
 
 @Injectable({ providedIn: 'root' })
 export class InboxApiService {
@@ -58,7 +58,31 @@ export class InboxApiService {
     return this.http.get<Categoria[]>(this.categoriasUrl);
   }
 
+  createCategoria(nombre: string, abreviatura: string, colorHex: string): Observable<void> {
+    return this.http.post<void>(this.categoriasUrl, { nombre, abreviatura, colorHex });
+  }
+
+  updateCategoriaConfig(id: number, nombre: string, abreviatura: string, colorHex: string): Observable<void> {
+    return this.http.patch<void>(`${this.categoriasUrl}/${id}`, { nombre, abreviatura, colorHex });
+  }
+
   updateCategoria(incidenciaId: number, categoriaId: number): Observable<void> {
     return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/categoria`, { categoriaId });
+  }
+
+  updateIncidenciaTecnico(incidenciaId: number, tecnicoNombre: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/tecnico`, { tecnicoNombre });
+  }
+
+  updateResuelta(incidenciaId: number, resuelta: boolean): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/resuelta`, { resuelta });
+  }
+
+  getStats(): Observable<IncidenciasStatsResponse> {
+    return this.http.get<IncidenciasStatsResponse>(`${this.inboxUrl}/incidencias/stats`);
+  }
+
+  createTecnico(nombre: string, email: string): Observable<void> {
+    return this.http.post<void>('http://localhost:4000/api/tecnicos', { nombre, email });
   }
 }

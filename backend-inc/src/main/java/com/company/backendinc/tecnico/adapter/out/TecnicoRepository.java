@@ -50,6 +50,10 @@ public class TecnicoRepository {
                 .orElse(null);
     }
 
+    public void create(String nombre, String email) {
+        jdbcTemplate.update("INSERT INTO tecnico (nombre, email, activo) VALUES (?, ?, true)", nombre, email);
+    }
+
     private boolean hasEmailColumn() {
         return Boolean.TRUE.equals(jdbcTemplate.execute((Connection connection) -> {
             DatabaseMetaData metaData = connection.getMetaData();
