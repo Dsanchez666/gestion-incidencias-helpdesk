@@ -1,4 +1,4 @@
-# Gestion de Incidencias - Buzon Helpdesk ETNA
+# Gestion de Incidencias - Convierte cualquier buzón en el punto de entrada de un gestor completo de incidencias Helpdesk
 
 Proyecto enterprise con backend Java/Spring y frontend Angular siguiendo Hexagonal Architecture + DDD + TDD.
 
@@ -82,9 +82,9 @@ Credenciales de ejemplo:
 - `supervisor` / `supervisor123`
 
 Notas:
-- El frontend usa `ng serve` con puerto 3000 y configuración de desarrollo (sin optimizaciones).
+- El frontend usa `ng serve` con puerto 3000 y configuraciÃ³n de desarrollo (sin optimizaciones).
 
 ## Tests
 
-La documentaci�n de los tests est� en docs/TESTS.md.
+La documentación de los tests está en docs/TESTS.md.
 
