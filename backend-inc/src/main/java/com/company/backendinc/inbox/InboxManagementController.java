@@ -39,6 +39,11 @@ public class InboxManagementController {
         return ResponseEntity.ok(useCase.listIncidencias());
     }
 
+    @GetMapping("/incidencias/{incidenciaId}/notas")
+    public ResponseEntity<List<IncidenciaNota>> notas(@PathVariable Long incidenciaId) {
+        return ResponseEntity.ok(useCase.listNotas(incidenciaId));
+    }
+
     @PatchMapping("/{messageId}/incidencia")
     public ResponseEntity<Void> updateIncidencia(@PathVariable String messageId,
             @RequestBody IncidenciaUpdateRequest request) {
@@ -106,5 +111,11 @@ public class InboxManagementController {
     @GetMapping("/incidencias/stats")
     public ResponseEntity<IncidenciasStatsResponse> stats() {
         return ResponseEntity.ok(useCase.getStats());
+    }
+
+    @PostMapping("/incidencias/{incidenciaId}/notas")
+    public ResponseEntity<Void> addNota(@PathVariable Long incidenciaId, @RequestBody IncidenciaNotaCreateRequest request) {
+        useCase.addNota(incidenciaId, request.getTecnico(), request.getObservacion(), request.getDetalle(), request.getAccionRealizada());
+        return ResponseEntity.noContent().build();
     }
 }

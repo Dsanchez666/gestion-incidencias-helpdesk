@@ -7,6 +7,8 @@ import com.company.backendinc.inbox.IncidenciasStatsResponse;
 import com.company.backendinc.inbox.InboxItem;
 import com.company.backendinc.inbox.InboxContext;
 import com.company.backendinc.inbox.IncidenciaInboxItem;
+import com.company.backendinc.inbox.IncidenciaNota;
+import com.company.backendinc.inbox.adapter.out.IncidenciaNotasRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementState;
 import com.company.backendinc.inbox.adapter.out.IncidenciaInboxRepository;
@@ -39,6 +41,7 @@ public class InboxManagementUseCase {
     private final MailManagementRepository repository;
     private final TecnicoRepository tecnicoRepository;
     private final IncidenciaInboxRepository incidenciaInboxRepository;
+    private final IncidenciaNotasRepository incidenciaNotasRepository;
     private final TecnicoNotificationGateway notificationGateway;
     private final CategoriaRepository categoriaRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -49,6 +52,7 @@ public class InboxManagementUseCase {
             MailManagementRepository repository,
             TecnicoRepository tecnicoRepository,
             IncidenciaInboxRepository incidenciaInboxRepository,
+            IncidenciaNotasRepository incidenciaNotasRepository,
             TecnicoNotificationGateway notificationGateway,
             CategoriaRepository categoriaRepository) {
         this.tokenStore = tokenStore;
@@ -56,6 +60,7 @@ public class InboxManagementUseCase {
         this.repository = repository;
         this.tecnicoRepository = tecnicoRepository;
         this.incidenciaInboxRepository = incidenciaInboxRepository;
+        this.incidenciaNotasRepository = incidenciaNotasRepository;
         this.notificationGateway = notificationGateway;
         this.categoriaRepository = categoriaRepository;
     }
@@ -185,9 +190,12 @@ public class InboxManagementUseCase {
                 null,
                 null,
                 false,
+                false,
                 null);
         incidenciaInboxRepository.upsert(incidencia);
-        notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender());
+        byte[] originalEml = fetchOriginalMessageEml(target.getMailbox(), target.getMessageId());
+        notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender(),
+                target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
     }
 
     public void assignIncidencias(List<String> messageIds, String tecnicoNombre, int summaryLength) throws IOException {
@@ -294,6 +302,38 @@ public class InboxManagementUseCase {
 
     public List<IncidenciaInboxItem> listIncidencias() {
         return incidenciaInboxRepository.list();
+    }
+
+    public List<IncidenciaNota> listNotas(Long incidenciaId) {
+        return incidenciaNotasRepository.listByIncidencia(incidenciaId);
+    }
+
+    public void addNota(Long incidenciaId, String tecnico, String observacion, String detalle, String accionRealizada) {
+        incidenciaNotasRepository.addNota(incidenciaId, tecnico, observacion, detalle, accionRealizada);
+        incidenciaInboxRepository.markEnProgreso(incidenciaId, true);
+    }
+
+    private byte[] fetchOriginalMessageEml(String mailbox, String messageId) {
+        try {
+            String accessToken = tokenStore.getValidAccessToken().orElse(null);
+            if (accessToken == null) {
+                return null;
+            }
+            MailboxConfig config = mailboxConfigPort.load();
+            String graphBaseUrl = config.getGraphBaseUrl() == null || config.getGraphBaseUrl().isBlank()
+                    ? "https://graph.microsoft.com/v1.0"
+                    : config.getGraphBaseUrl();
+            String url = UriComponentsBuilder.fromHttpUrl(graphBaseUrl)
+                    .path("/users/{id}/messages/{messageId}/$value")
+                    .buildAndExpand(mailbox, messageId)
+                    .toUriString();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + accessToken);
+            ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), byte[].class);
+            return response.getBody();
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private boolean canReadMailbox() {
