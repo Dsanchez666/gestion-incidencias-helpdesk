@@ -8,6 +8,7 @@ import {
   InboxContext,
   InboxItem,
   IncidenciaInboxItem,
+  IncidenciaNota,
   IncidenciasStatsResponse,
   Tecnico
 } from '../domain/inbox.model';
@@ -33,6 +34,8 @@ type IncSortKey =
   styleUrl: './inbox.component.scss'
 })
 export class InboxComponent {
+  private static readonly INTERACTIVE_CLICK_SELECTOR =
+    'select, input, textarea, button, a, label, option, [role="button"], [data-no-open-modal]';
   context: InboxContext = {
     appName: 'Gestion de Buzon de Incidencias',
     mailboxNombre: '-',
@@ -48,6 +51,13 @@ export class InboxComponent {
   categorias: Categoria[] = [];
   stats: IncidenciasStatsResponse | null = null;
   showStatsModal = false;
+  showTreatmentModal = false;
+  selectedIncidencia: IncidenciaInboxItem | null = null;
+  notasIncidencia: IncidenciaNota[] = [];
+  notaTecnico = '';
+  notaObservacion = '';
+  notaDetalle = '';
+  notaAccion = '';
   summaryLength = 50;
   error = '';
   loading = true;
@@ -232,6 +242,55 @@ export class InboxComponent {
     return {
       background: inc.categoriaColorHex ?? '#f8fafc'
     };
+  }
+
+  openTreatmentModal(inc: IncidenciaInboxItem): void {
+    this.selectedIncidencia = inc;
+    this.notaTecnico = this.selectedTecnicoByIncidenciaId[inc.id] ?? inc.tecnicoAsignado;
+    this.notaObservacion = '';
+    this.notaDetalle = '';
+    this.notaAccion = '';
+    this.inboxApi.listNotas(inc.id).subscribe({
+      next: (notas) => {
+        this.notasIncidencia = notas;
+        this.showTreatmentModal = true;
+      },
+      error: () => {
+        this.notasIncidencia = [];
+        this.showTreatmentModal = true;
+      }
+    });
+  }
+
+  onIncCardClick(event: MouseEvent, inc: IncidenciaInboxItem): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(InboxComponent.INTERACTIVE_CLICK_SELECTOR)) return;
+    this.openTreatmentModal(inc);
+  }
+
+  closeTreatmentModal(): void {
+    this.showTreatmentModal = false;
+    this.selectedIncidencia = null;
+  }
+
+  addNotaTratamiento(): void {
+    if (!this.selectedIncidencia || !this.notaTecnico || !this.notaObservacion) return;
+    this.inboxApi
+      .addNota(
+        this.selectedIncidencia.id,
+        this.notaTecnico,
+        this.notaObservacion,
+        this.notaDetalle,
+        this.notaAccion
+      )
+      .subscribe({
+        next: () => {
+          if (this.selectedIncidencia) {
+            this.openTreatmentModal(this.selectedIncidencia);
+            this.loadIncidencias();
+          }
+        }
+      });
   }
 
   openAdminModal(tab: 'tecnico' | 'categoria'): void {

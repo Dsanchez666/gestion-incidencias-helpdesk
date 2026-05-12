@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Categoria, InboxContext, InboxItem, IncidenciaInboxItem, IncidenciasStatsResponse, Tecnico } from '../domain/inbox.model';
+import {
+  Categoria,
+  InboxContext,
+  InboxItem,
+  IncidenciaInboxItem,
+  IncidenciaNota,
+  IncidenciasStatsResponse,
+  Tecnico
+} from '../domain/inbox.model';
 
 @Injectable({ providedIn: 'root' })
 export class InboxApiService {
@@ -84,5 +92,24 @@ export class InboxApiService {
 
   createTecnico(nombre: string, email: string): Observable<void> {
     return this.http.post<void>('http://localhost:4000/api/tecnicos', { nombre, email });
+  }
+
+  listNotas(incidenciaId: number): Observable<IncidenciaNota[]> {
+    return this.http.get<IncidenciaNota[]>(`${this.inboxUrl}/incidencias/${incidenciaId}/notas`);
+  }
+
+  addNota(
+    incidenciaId: number,
+    tecnico: string,
+    observacion: string,
+    detalle: string,
+    accionRealizada: string
+  ): Observable<void> {
+    return this.http.post<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/notas`, {
+      tecnico,
+      observacion,
+      detalle,
+      accionRealizada
+    });
   }
 }

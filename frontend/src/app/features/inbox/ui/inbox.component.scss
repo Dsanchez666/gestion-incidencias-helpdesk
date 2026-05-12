@@ -28,7 +28,9 @@ button { border: 0; border-radius: 8px; cursor: pointer; }
 .inc-card {
   background: #fff; border: 1px solid #d8dce3; border-radius: 14px; padding: 12px;
   box-shadow: 0 2px 0 #e5e7eb;
+  cursor: pointer;
 }
+.inc-card.in-progress { box-shadow: 0 0 0 2px #111827, 0 2px 0 #e5e7eb; }
 .inc-card-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .inc-card-head strong { font-size: 0.96rem; }
 .mono { font-family: "Courier New", Courier, monospace; font-size: 0.85rem; letter-spacing: 0.06em; }
@@ -67,6 +69,19 @@ button { border: 0; border-radius: 8px; cursor: pointer; }
 .admin-dialog header { display: flex; justify-content: space-between; align-items: center; }
 .tabs { display: flex; gap: 12px; margin: 12px 0; }
 .form-grid { display: grid; gap: 10px; }
+.form-grid textarea { min-height: 90px; border: 1px solid #bfc5d0; border-radius: 8px; padding: 8px; resize: vertical; }
+
+.treatment-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: grid; place-items: center; z-index: 1002;
+}
+.treatment-dialog {
+  width: min(760px, 92vw); max-height: 86vh; overflow: auto;
+  background: #fff; border: 1px solid #cfd6e3; border-radius: 12px; padding: 14px;
+}
+.treatment-dialog header { display: flex; justify-content: space-between; align-items: center; }
+.notes-timeline { display: grid; gap: 8px; margin-top: 10px; }
+.note-item { border: 1px solid #d8dce3; border-radius: 10px; padding: 8px; background: #fafafa; }
 
 @media (max-width: 1200px) {
   .inbox-shell { grid-template-rows: auto auto 45vh 1fr; }

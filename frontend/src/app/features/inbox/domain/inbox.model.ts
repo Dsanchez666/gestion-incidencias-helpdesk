@@ -40,6 +40,7 @@ export interface IncidenciaInboxItem {
   categoriaAbreviatura?: string | null;
   categoriaColorHex?: string | null;
   resuelta: boolean;
+  enProgreso: boolean;
   assignedAt: string;
 }
 
@@ -78,4 +79,14 @@ export interface IncidenciasStatsResponse {
     anteriorResueltas: number;
     anteriorSinResolver: number;
   };
+}
+
+export interface IncidenciaNota {
+  id: number;
+  incidenciaId: number;
+  tecnico: string;
+  observacion: string;
+  detalle: string;
+  accionRealizada: string;
+  createdAt: string;
 }

@@ -28,9 +28,20 @@ CREATE TABLE IF NOT EXISTS incidencia_inbox (
   tecnico_email VARCHAR(255) NOT NULL,
   categoria_id BIGINT NULL,
   resuelta BOOLEAN NOT NULL DEFAULT FALSE,
+  en_progreso BOOLEAN NOT NULL DEFAULT FALSE,
   resolved_at TIMESTAMP NULL,
   assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_incidencia_inbox_message (message_id)
+);
+
+CREATE TABLE IF NOT EXISTS incidencia_nota (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  incidencia_id BIGINT NOT NULL,
+  tecnico VARCHAR(150) NOT NULL,
+  observacion VARCHAR(500) NOT NULL,
+  detalle TEXT NULL,
+  accion_realizada VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS categoria (
