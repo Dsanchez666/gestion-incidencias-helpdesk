@@ -5,6 +5,15 @@
     "mailPreviewLength": 50,
     "splashDurationSeconds": 3
   },
+"smtp": {
+    "host": "smtp.enaire.es",
+    "port": 587,
+    "username": "",
+    "password": "",
+    "from": "no-reply@gestion-incidencias.local",
+    "auth": true,
+    "starttls": true
+  },
   "mailboxes": [
     {
       "id": "example",

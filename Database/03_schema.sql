@@ -27,10 +27,51 @@ CREATE TABLE IF NOT EXISTS incidencia_inbox (
   tecnico_asignado VARCHAR(150) NOT NULL,
   tecnico_email VARCHAR(255) NOT NULL,
   categoria_id BIGINT NULL,
+  prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
   resuelta BOOLEAN NOT NULL DEFAULT FALSE,
+  rechazada BOOLEAN NOT NULL DEFAULT FALSE,
+  en_progreso BOOLEAN NOT NULL DEFAULT FALSE,
+  resolucion_texto TEXT NULL,
+  resuelta_por VARCHAR(255) NULL,
+  rechazo_motivo TEXT NULL,
+  rechazada_por VARCHAR(255) NULL,
+  rechazada_at TIMESTAMP NULL,
   resolved_at TIMESTAMP NULL,
   assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_incidencia_inbox_message (message_id)
+);
+
+CREATE TABLE IF NOT EXISTS incidencia_prioridad (
+  codigo VARCHAR(20) PRIMARY KEY
+);
+INSERT IGNORE INTO incidencia_prioridad (codigo) VALUES ('URGENTE'), ('ALTA'), ('NORMAL'), ('BAJA');
+
+CREATE TABLE IF NOT EXISTS incidencia_nota (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  incidencia_id BIGINT NOT NULL,
+  tecnico VARCHAR(150) NOT NULL,
+  observacion VARCHAR(500) NOT NULL,
+  detalle TEXT NULL,
+  accion_realizada VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS incidencia_historico (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  incidencia_id BIGINT NOT NULL,
+  actor VARCHAR(255) NOT NULL,
+  descripcion VARCHAR(1000) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS incidencia_tracking_token (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  incidencia_id BIGINT NOT NULL,
+  token VARCHAR(255) NOT NULL,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  expires_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_incidencia_tracking_token (token)
 );
 
 CREATE TABLE IF NOT EXISTS categoria (

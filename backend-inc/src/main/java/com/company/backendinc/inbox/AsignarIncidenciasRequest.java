@@ -5,6 +5,7 @@ import java.util.List;
 public class AsignarIncidenciasRequest {
     private List<String> messageIds;
     private String tecnicoNombre;
+    private String prioridad;
 
     public List<String> getMessageIds() {
         return messageIds;
@@ -20,5 +21,13 @@ public class AsignarIncidenciasRequest {
 
     public void setTecnicoNombre(String tecnicoNombre) {
         this.tecnicoNombre = tecnicoNombre;
+    }
+
+    public String getPrioridad() {
+        return prioridad;
+    }
+
+    public void setPrioridad(String prioridad) {
+        this.prioridad = prioridad;
     }
 }

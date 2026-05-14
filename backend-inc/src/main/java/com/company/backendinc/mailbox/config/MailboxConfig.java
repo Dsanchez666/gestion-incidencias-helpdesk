@@ -7,6 +7,7 @@ import java.util.List;
 public class MailboxConfig {
     private String graphBaseUrl;
     private String exchangeEwsUrl;
+    private SmtpConfig smtp;
     private List<MailboxEntry> mailboxes;
 
     public String getGraphBaseUrl() {
@@ -23,6 +24,14 @@ public class MailboxConfig {
 
     public void setExchangeEwsUrl(String exchangeEwsUrl) {
         this.exchangeEwsUrl = exchangeEwsUrl;
+    }
+
+    public SmtpConfig getSmtp() {
+        return smtp;
+    }
+
+    public void setSmtp(SmtpConfig smtp) {
+        this.smtp = smtp;
     }
 
     public List<MailboxEntry> getMailboxes() {

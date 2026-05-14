@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Categoria, InboxContext, InboxItem, IncidenciaInboxItem, IncidenciasStatsResponse, Tecnico } from '../domain/inbox.model';
+import {
+  Categoria,
+  InboxContext,
+  InboxItem,
+  IncidenciaInboxItem,
+  IncidenciaNota,
+  IncidenciasStatsResponse,
+  Tecnico
+} from '../domain/inbox.model';
 
 @Injectable({ providedIn: 'root' })
 export class InboxApiService {
@@ -40,17 +48,18 @@ export class InboxApiService {
     return this.http.get<Tecnico[]>(this.tecnicosUrl);
   }
 
-  assignIncidencia(messageId: string, tecnicoNombre: string, summaryLength: number): Observable<void> {
+  assignIncidencia(messageId: string, tecnicoNombre: string, prioridad: string, summaryLength: number): Observable<void> {
     return this.http.post<void>(
       `${this.inboxUrl}/${encodeURIComponent(messageId)}/asignar-incidencia?summaryLength=${summaryLength}`,
-      { tecnicoNombre }
+      { tecnicoNombre, prioridad }
     );
   }
 
-  assignIncidencias(messageIds: string[], tecnicoNombre: string, summaryLength: number): Observable<void> {
+  assignIncidencias(messageIds: string[], tecnicoNombre: string, prioridad: string, summaryLength: number): Observable<void> {
     return this.http.post<void>(`${this.inboxUrl}/asignar-incidencias?summaryLength=${summaryLength}`, {
       messageIds,
-      tecnicoNombre
+      tecnicoNombre,
+      prioridad
     });
   }
 
@@ -77,6 +86,23 @@ export class InboxApiService {
   updateResuelta(incidenciaId: number, resuelta: boolean): Observable<void> {
     return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/resuelta`, { resuelta });
   }
+  updatePrioridad(incidenciaId: number, prioridad: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/prioridad`, { prioridad });
+  }
+  redirectIncidencia(incidenciaId: number, tecnicoNombre: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/redirigir`, { tecnicoNombre });
+  }
+  resolveIncidencia(incidenciaId: number, descripcionResolucion: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/resolver`, { descripcionResolucion });
+  }
+  rejectResolution(incidenciaId: number, motivo: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/rechazar-resolucion`, { motivo });
+  }
+  getSeguimiento(token: string): Observable<{ incidencia: IncidenciaInboxItem; historico: IncidenciaNota[]; tiempoResolucion: string }> {
+    return this.http.get<{ incidencia: IncidenciaInboxItem; historico: IncidenciaNota[]; tiempoResolucion: string }>(
+      `${this.inboxUrl}/incidencias/seguimiento/${encodeURIComponent(token)}`
+    );
+  }
 
   getStats(): Observable<IncidenciasStatsResponse> {
     return this.http.get<IncidenciasStatsResponse>(`${this.inboxUrl}/incidencias/stats`);
@@ -84,5 +110,24 @@ export class InboxApiService {
 
   createTecnico(nombre: string, email: string): Observable<void> {
     return this.http.post<void>('http://localhost:4000/api/tecnicos', { nombre, email });
+  }
+
+  listNotas(incidenciaId: number): Observable<IncidenciaNota[]> {
+    return this.http.get<IncidenciaNota[]>(`${this.inboxUrl}/incidencias/${incidenciaId}/notas`);
+  }
+
+  addNota(
+    incidenciaId: number,
+    tecnico: string,
+    observacion: string,
+    detalle: string,
+    accionRealizada: string
+  ): Observable<void> {
+    return this.http.post<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/notas`, {
+      tecnico,
+      observacion,
+      detalle,
+      accionRealizada
+    });
   }
 }
