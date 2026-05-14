@@ -36,25 +36,6 @@ ALTER TABLE incidencia_inbox
   ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP NULL;
 ALTER TABLE incidencia_inbox
   ADD COLUMN IF NOT EXISTS en_progreso BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL';
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS rechazada BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS resolucion_texto TEXT NULL;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS resuelta_por VARCHAR(255) NULL;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS rechazo_motivo TEXT NULL;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS rechazada_por VARCHAR(255) NULL;
-ALTER TABLE incidencia_inbox
-  ADD COLUMN IF NOT EXISTS rechazada_at TIMESTAMP NULL;
-
-CREATE TABLE IF NOT EXISTS incidencia_prioridad (
-  codigo VARCHAR(20) PRIMARY KEY
-);
-INSERT IGNORE INTO incidencia_prioridad (codigo) VALUES ('URGENTE'), ('ALTA'), ('NORMAL'), ('BAJA');
 
 CREATE TABLE IF NOT EXISTS categoria (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -91,22 +72,4 @@ CREATE TABLE IF NOT EXISTS incidencia_nota (
   detalle TEXT NULL,
   accion_realizada VARCHAR(500) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS incidencia_historico (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  incidencia_id BIGINT NOT NULL,
-  actor VARCHAR(255) NOT NULL,
-  descripcion VARCHAR(1000) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS incidencia_tracking_token (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  incidencia_id BIGINT NOT NULL,
-  token VARCHAR(255) NOT NULL,
-  activo BOOLEAN NOT NULL DEFAULT TRUE,
-  expires_at TIMESTAMP NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_incidencia_tracking_token (token)
 );

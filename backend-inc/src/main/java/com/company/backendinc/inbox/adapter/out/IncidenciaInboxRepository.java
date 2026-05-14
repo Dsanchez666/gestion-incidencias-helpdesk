@@ -34,8 +34,7 @@ public class IncidenciaInboxRepository {
     public List<IncidenciaInboxItem> list() {
         ensureTable();
         String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
-                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.rechazada, i.en_progreso, "
-                + "i.resolucion_texto, i.resuelta_por, i.rechazo_motivo, i.rechazada_por, DATE_FORMAT(i.rechazada_at, '%Y-%m-%dT%H:%i:%s') as rechazada_at, "
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.resuelta, i.en_progreso, "
                 + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
                 + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id ORDER BY assigned_at DESC";
         return jdbcTemplate.query(sql, (rs, rowNum) -> new IncidenciaInboxItem(
@@ -53,13 +52,7 @@ public class IncidenciaInboxRepository {
                 rs.getString("categoria_color_hex"),
                 rs.getString("prioridad"),
                 rs.getBoolean("resuelta"),
-                rs.getBoolean("rechazada"),
                 rs.getBoolean("en_progreso"),
-                rs.getString("resolucion_texto"),
-                rs.getString("resuelta_por"),
-                rs.getString("rechazo_motivo"),
-                rs.getString("rechazada_por"),
-                rs.getString("rechazada_at"),
                 rs.getString("assigned_at")));
     }
 
@@ -77,40 +70,14 @@ public class IncidenciaInboxRepository {
     public void updateResuelta(Long incidenciaId, boolean resuelta) {
         ensureTable();
         jdbcTemplate.update(
-                "UPDATE incidencia_inbox SET resuelta = ?, rechazada = CASE WHEN ? THEN false ELSE rechazada END, en_progreso = CASE WHEN ? THEN false ELSE en_progreso END, "
+                "UPDATE incidencia_inbox SET resuelta = ?, en_progreso = CASE WHEN ? THEN false ELSE en_progreso END, "
                         + "resolved_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id = ?",
-                resuelta, resuelta, resuelta, resuelta, incidenciaId);
+                resuelta, resuelta, resuelta, incidenciaId);
     }
 
     public void markEnProgreso(Long incidenciaId, boolean enProgreso) {
         ensureTable();
         jdbcTemplate.update("UPDATE incidencia_inbox SET en_progreso = ? WHERE id = ?", enProgreso, incidenciaId);
-    }
-
-    public void updatePrioridad(Long incidenciaId, String prioridad) {
-        ensureTable();
-        jdbcTemplate.update("UPDATE incidencia_inbox SET prioridad = ? WHERE id = ?", prioridad, incidenciaId);
-    }
-
-    public void resolveWithDescription(Long incidenciaId, String descripcion, String actor) {
-        ensureTable();
-        jdbcTemplate.update(
-                "UPDATE incidencia_inbox SET resuelta = true, rechazada = false, en_progreso = false, resolucion_texto = ?, resuelta_por = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?",
-                descripcion, actor, incidenciaId);
-    }
-
-    public void rejectResolution(Long incidenciaId, String motivo, String actor) {
-        ensureTable();
-        jdbcTemplate.update(
-                "UPDATE incidencia_inbox SET rechazada = true, resuelta = false, rechazo_motivo = ?, rechazada_por = ?, rechazada_at = CURRENT_TIMESTAMP WHERE id = ?",
-                motivo, actor, incidenciaId);
-    }
-
-    public IncidenciaInboxItem findById(Long incidenciaId) {
-        ensureTable();
-        List<IncidenciaInboxItem> all = list();
-        for (IncidenciaInboxItem i : all) if (i.getId().equals(incidenciaId)) return i;
-        return null;
     }
 
     public List<Map<String, Object>> categoryStatsByAssignedMonth(YearMonth month) {
@@ -195,13 +162,7 @@ public class IncidenciaInboxRepository {
                 + "categoria_id BIGINT NULL,"
                 + "prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL',"
                 + "resuelta BOOLEAN NOT NULL DEFAULT FALSE,"
-                + "rechazada BOOLEAN NOT NULL DEFAULT FALSE,"
                 + "en_progreso BOOLEAN NOT NULL DEFAULT FALSE,"
-                + "resolucion_texto TEXT NULL,"
-                + "resuelta_por VARCHAR(255) NULL,"
-                + "rechazo_motivo TEXT NULL,"
-                + "rechazada_por VARCHAR(255) NULL,"
-                + "rechazada_at TIMESTAMP NULL,"
                 + "resolved_at TIMESTAMP NULL,"
                 + "assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 + "UNIQUE KEY uq_incidencia_inbox_message (message_id)"
@@ -226,31 +187,6 @@ public class IncidenciaInboxRepository {
         if (!hasColumn("incidencia_inbox", "en_progreso")) {
             jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN en_progreso BOOLEAN NOT NULL DEFAULT FALSE");
         }
-        if (!hasColumn("incidencia_inbox", "prioridad")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL'");
-        }
-        if (!hasColumn("incidencia_inbox", "rechazada")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN rechazada BOOLEAN NOT NULL DEFAULT FALSE");
-        }
-        if (!hasColumn("incidencia_inbox", "resolucion_texto")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN resolucion_texto TEXT NULL");
-        }
-        if (!hasColumn("incidencia_inbox", "resuelta_por")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN resuelta_por VARCHAR(255) NULL");
-        }
-        if (!hasColumn("incidencia_inbox", "rechazo_motivo")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN rechazo_motivo TEXT NULL");
-        }
-        if (!hasColumn("incidencia_inbox", "rechazada_por")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN rechazada_por VARCHAR(255) NULL");
-        }
-        if (!hasColumn("incidencia_inbox", "rechazada_at")) {
-            jdbcTemplate.execute("ALTER TABLE incidencia_inbox ADD COLUMN rechazada_at TIMESTAMP NULL");
-        }
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS incidencia_prioridad (" +
-                "codigo VARCHAR(20) PRIMARY KEY" +
-                ")");
-        jdbcTemplate.execute("INSERT IGNORE INTO incidencia_prioridad (codigo) VALUES ('URGENTE'), ('ALTA'), ('NORMAL'), ('BAJA')");
     }
 
     private boolean hasColumn(String tableName, String columnName) {

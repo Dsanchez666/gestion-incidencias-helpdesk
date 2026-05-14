@@ -8,10 +8,7 @@ import com.company.backendinc.inbox.InboxItem;
 import com.company.backendinc.inbox.InboxContext;
 import com.company.backendinc.inbox.IncidenciaInboxItem;
 import com.company.backendinc.inbox.IncidenciaNota;
-import com.company.backendinc.inbox.IncidenciaSeguimientoResponse;
 import com.company.backendinc.inbox.adapter.out.IncidenciaNotasRepository;
-import com.company.backendinc.inbox.adapter.out.IncidenciaHistoricoRepository;
-import com.company.backendinc.inbox.adapter.out.IncidenciaTrackingRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementState;
 import com.company.backendinc.inbox.adapter.out.IncidenciaInboxRepository;
@@ -45,8 +42,6 @@ public class InboxManagementUseCase {
     private final TecnicoRepository tecnicoRepository;
     private final IncidenciaInboxRepository incidenciaInboxRepository;
     private final IncidenciaNotasRepository incidenciaNotasRepository;
-    private final IncidenciaHistoricoRepository incidenciaHistoricoRepository;
-    private final IncidenciaTrackingRepository incidenciaTrackingRepository;
     private final TecnicoNotificationGateway notificationGateway;
     private final CategoriaRepository categoriaRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -58,8 +53,6 @@ public class InboxManagementUseCase {
             TecnicoRepository tecnicoRepository,
             IncidenciaInboxRepository incidenciaInboxRepository,
             IncidenciaNotasRepository incidenciaNotasRepository,
-            IncidenciaHistoricoRepository incidenciaHistoricoRepository,
-            IncidenciaTrackingRepository incidenciaTrackingRepository,
             TecnicoNotificationGateway notificationGateway,
             CategoriaRepository categoriaRepository) {
         this.tokenStore = tokenStore;
@@ -68,8 +61,6 @@ public class InboxManagementUseCase {
         this.tecnicoRepository = tecnicoRepository;
         this.incidenciaInboxRepository = incidenciaInboxRepository;
         this.incidenciaNotasRepository = incidenciaNotasRepository;
-        this.incidenciaHistoricoRepository = incidenciaHistoricoRepository;
-        this.incidenciaTrackingRepository = incidenciaTrackingRepository;
         this.notificationGateway = notificationGateway;
         this.categoriaRepository = categoriaRepository;
     }
@@ -201,20 +192,9 @@ public class InboxManagementUseCase {
                 false,
                 false,
                 false,
-                null,
-                null,
-                null,
-                null,
-                null,
+                false,
                 null);
         incidenciaInboxRepository.upsert(incidencia);
-        IncidenciaInboxItem creada = incidenciaInboxRepository.list().stream()
-                .filter(i -> messageId.equals(i.getMessageId()))
-                .findFirst().orElse(null);
-        if (creada != null) {
-            incidenciaHistoricoRepository.addEvento(creada.getId(), currentActor(),
-                    "Creada incidencia y asignada a " + tecnico.getNombre() + " con prioridad " + prioridadNormalizada);
-        }
         byte[] originalEml = fetchOriginalMessageEml(target.getMailbox(), target.getMessageId());
         notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender(),
                 target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
@@ -452,48 +432,12 @@ public class InboxManagementUseCase {
     }
 
     public List<IncidenciaNota> listNotas(Long incidenciaId) {
-        List<IncidenciaNota> notas = new ArrayList<>(incidenciaNotasRepository.listByIncidencia(incidenciaId));
-        notas.addAll(incidenciaHistoricoRepository.listByIncidencia(incidenciaId));
-        notas.sort((a, b) -> String.valueOf(a.getCreatedAt()).compareTo(String.valueOf(b.getCreatedAt())));
-        return notas;
-    }
-
-    private Map<String, Long> toMapByKey(List<Map<String, Object>> rows, String keyColumn, String valueColumn) {
-        Map<String, Long> out = new HashMap<>();
-        for (Map<String, Object> row : rows) {
-            out.put(String.valueOf(row.get(keyColumn)), ((Number) row.get(valueColumn)).longValue());
-        }
-        return out;
-    }
-
-    public IncidenciaSeguimientoResponse seguimientoByToken(String token) {
-        Long incidenciaId = incidenciaTrackingRepository.findIncidenciaIdByToken(token);
-        if (incidenciaId == null) throw new IllegalArgumentException("Token de seguimiento inválido");
-        IncidenciaInboxItem inc = incidenciaInboxRepository.findById(incidenciaId);
-        List<IncidenciaNota> hist = listNotas(incidenciaId);
-        return new IncidenciaSeguimientoResponse(inc, hist, "Consulta el histórico para el detalle temporal");
+        return incidenciaNotasRepository.listByIncidencia(incidenciaId);
     }
 
     public void addNota(Long incidenciaId, String tecnico, String observacion, String detalle, String accionRealizada) {
-        ensureNotConsulta();
         incidenciaNotasRepository.addNota(incidenciaId, tecnico, observacion, detalle, accionRealizada);
         incidenciaInboxRepository.markEnProgreso(incidenciaId, true);
-        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Añadida nota de tratamiento");
-    }
-
-    private String currentActor() {
-        String actor = tokenStore.getAccountHint();
-        return (actor == null || actor.isBlank()) ? "sistema" : actor;
-    }
-
-    private void ensureNotConsulta() {
-        String actor = currentActor();
-        String actorUser = actor.contains("@") ? actor.substring(0, actor.indexOf('@')) : actor;
-        Tecnico tecnico = tecnicoRepository.findActivoByUserHint(actorUser);
-        boolean actorEsConsulta = tecnico == null && !canReadMailbox();
-        if (actorEsConsulta) {
-            throw new IllegalArgumentException("Perfil CONSULTA no autorizado para esta operación");
-        }
     }
 
     private byte[] fetchOriginalMessageEml(String mailbox, String messageId) {

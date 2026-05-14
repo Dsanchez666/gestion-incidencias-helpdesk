@@ -20,17 +20,6 @@ public class IncidenciaNotasRepository {
                 incidenciaId, tecnico, observacion, detalle, accionRealizada);
     }
 
-    public void addEvento(Long incidenciaId, String actor, String descripcion) {
-        ensureTable();
-        jdbcTemplate.update(
-                "INSERT INTO incidencia_nota (incidencia_id, tecnico, observacion, detalle, accion_realizada) VALUES (?, ?, ?, ?, ?)",
-                incidenciaId,
-                actor,
-                "CAMBIO",
-                descripcion,
-                descripcion);
-    }
-
     public List<IncidenciaNota> listByIncidencia(Long incidenciaId) {
         ensureTable();
         return jdbcTemplate.query(

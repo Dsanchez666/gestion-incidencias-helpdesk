@@ -61,25 +61,6 @@ public class TecnicoNotificationGateway {
         }
     }
 
-    public void notifyResolutionToSender(String senderEmail, String subject, String descripcionResolucion, String enlaceSeguimiento) {
-        try {
-            SmtpConfig smtpConfig = mailboxConfigPort.load().getSmtp();
-            if (smtpConfig == null) return;
-            Properties props = createSmtpProperties(smtpConfig);
-            Session session = Session.getInstance(props, null);
-            MimeMessage message = new MimeMessage(session);
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(smtpConfig.getFrom());
-            helper.setTo(senderEmail);
-            helper.setSubject("Incidencia resuelta - " + subject);
-            helper.setText("Tu incidencia se ha marcado como resuelta.\n\nDescripción de resolución:\n"
-                    + descripcionResolucion + "\n\nPuedes consultar el detalle aquí:\n" + enlaceSeguimiento);
-            sendMessage(message, smtpConfig);
-        } catch (Exception ex) {
-            log.warn("No se pudo enviar email de resolución a {}: {}", senderEmail, ex.getMessage());
-        }
-    }
-
     private Properties createSmtpProperties(SmtpConfig config) {
         Properties props = new Properties();
         props.put("mail.smtp.host", config.getHost());

@@ -58,9 +58,6 @@ export class InboxComponent {
   notaObservacion = '';
   notaDetalle = '';
   notaAccion = '';
-  resolucionDescripcion = '';
-  redirigirTecnico = '';
-  rechazoMotivo = '';
   summaryLength = 50;
   error = '';
   loading = true;
@@ -307,14 +304,6 @@ export class InboxComponent {
     return {
       background: inc.categoriaColorHex ?? '#f8fafc'
     };
-  }
-
-  prioridadStyleClass(inc: IncidenciaInboxItem): string {
-    const p = (inc.prioridad ?? 'NORMAL').toUpperCase();
-    if (p === 'URGENTE') return 'priority-urgente';
-    if (p === 'ALTA') return 'priority-alta';
-    if (p === 'BAJA') return 'priority-baja';
-    return '';
   }
 
   openTreatmentModal(inc: IncidenciaInboxItem): void {

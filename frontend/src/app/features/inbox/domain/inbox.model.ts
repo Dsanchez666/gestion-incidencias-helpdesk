@@ -41,13 +41,7 @@ export interface IncidenciaInboxItem {
   categoriaColorHex?: string | null;
   prioridad?: 'URGENTE' | 'ALTA' | 'NORMAL' | 'BAJA' | string;
   resuelta: boolean;
-  rechazada?: boolean;
   enProgreso: boolean;
-  resolucionTexto?: string | null;
-  resueltaPor?: string | null;
-  rechazoMotivo?: string | null;
-  rechazadaPor?: string | null;
-  rechazadaAt?: string | null;
   assignedAt: string;
 }
 
