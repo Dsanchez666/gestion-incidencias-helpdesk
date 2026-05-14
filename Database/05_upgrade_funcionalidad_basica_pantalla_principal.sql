@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS incidencia_inbox (
   tecnico_asignado VARCHAR(150) NOT NULL,
   tecnico_email VARCHAR(255) NOT NULL,
   categoria_id BIGINT NULL,
+  prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
   resuelta BOOLEAN NOT NULL DEFAULT FALSE,
   resolved_at TIMESTAMP NULL,
   assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

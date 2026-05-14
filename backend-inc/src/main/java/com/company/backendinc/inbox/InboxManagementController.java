@@ -63,7 +63,7 @@ public class InboxManagementController {
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
             @RequestBody AsignarIncidenciaRequest request) throws IOException {
         try {
-            useCase.assignIncidencia(messageId, request.getTecnicoNombre(), summaryLength);
+            useCase.assignIncidencia(messageId, request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -75,7 +75,7 @@ public class InboxManagementController {
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
             @RequestBody AsignarIncidenciasRequest request) throws IOException {
         try {
-            useCase.assignIncidencias(request.getMessageIds(), request.getTecnicoNombre(), summaryLength);
+            useCase.assignIncidencias(request.getMessageIds(), request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -106,6 +106,55 @@ public class InboxManagementController {
     public ResponseEntity<Void> updateResuelta(@PathVariable Long incidenciaId, @RequestBody ResueltaUpdateRequest request) {
         useCase.updateResuelta(incidenciaId, request.isResuelta());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/prioridad")
+    public ResponseEntity<Void> updatePrioridad(@PathVariable Long incidenciaId, @RequestBody PrioridadUpdateRequest request) {
+        try {
+            useCase.updatePrioridad(incidenciaId, request.getPrioridad());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/redirigir")
+    public ResponseEntity<Void> redirigir(@PathVariable Long incidenciaId, @RequestBody RedirigirIncidenciaRequest request) {
+        try {
+            useCase.redirectIncidencia(incidenciaId, request.getTecnicoNombre());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/resolver")
+    public ResponseEntity<Void> resolver(@PathVariable Long incidenciaId, @RequestBody ResolverIncidenciaRequest request) {
+        try {
+            useCase.resolveIncidencia(incidenciaId, request.getDescripcionResolucion());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PatchMapping("/incidencias/{incidenciaId}/rechazar-resolucion")
+    public ResponseEntity<Void> rechazarResolucion(@PathVariable Long incidenciaId, @RequestBody RechazarResolucionRequest request) {
+        try {
+            useCase.rejectResolution(incidenciaId, request.getMotivo());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @GetMapping("/incidencias/seguimiento/{token}")
+    public ResponseEntity<IncidenciaSeguimientoResponse> seguimiento(@PathVariable String token) {
+        try {
+            return ResponseEntity.ok(useCase.seguimientoByToken(token));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     @GetMapping("/incidencias/stats")

@@ -21,14 +21,14 @@ public class IncidenciaInboxRepository {
     public void upsert(IncidenciaInboxItem item) {
         ensureTable();
         String sql = "INSERT INTO incidencia_inbox "
-                + "(message_id, mailbox, received_date_time, sender, subject, summary, tecnico_asignado, tecnico_email, categoria_id, resuelta, resolved_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, false, NULL) "
+                + "(message_id, mailbox, received_date_time, sender, subject, summary, tecnico_asignado, tecnico_email, categoria_id, prioridad, resuelta, rechazada, resolved_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, NULL) "
                 + "ON DUPLICATE KEY UPDATE "
                 + "mailbox = VALUES(mailbox), received_date_time = VALUES(received_date_time), sender = VALUES(sender), "
                 + "subject = VALUES(subject), summary = VALUES(summary), tecnico_asignado = VALUES(tecnico_asignado), "
-                + "tecnico_email = VALUES(tecnico_email), categoria_id = VALUES(categoria_id), assigned_at = CURRENT_TIMESTAMP";
+                + "tecnico_email = VALUES(tecnico_email), categoria_id = VALUES(categoria_id), prioridad = VALUES(prioridad), assigned_at = CURRENT_TIMESTAMP";
         jdbcTemplate.update(sql, item.getMessageId(), item.getMailbox(), item.getReceivedDateTime(), item.getSender(), item.getSubject(),
-                item.getSummary(), item.getTecnicoAsignado(), item.getTecnicoEmail(), item.getCategoriaId());
+                item.getSummary(), item.getTecnicoAsignado(), item.getTecnicoEmail(), item.getCategoriaId(), item.getPrioridad());
     }
 
     public List<IncidenciaInboxItem> list() {
@@ -50,6 +50,7 @@ public class IncidenciaInboxRepository {
                 rs.getObject("categoria_id", Long.class),
                 rs.getString("categoria_abreviatura"),
                 rs.getString("categoria_color_hex"),
+                rs.getString("prioridad"),
                 rs.getBoolean("resuelta"),
                 rs.getBoolean("en_progreso"),
                 rs.getString("assigned_at")));
@@ -120,6 +121,33 @@ public class IncidenciaInboxRepository {
         return jdbcTemplate.queryForList(sql, month.getYear(), month.getMonthValue());
     }
 
+    public List<Map<String, Object>> categoryRejectedStatsByAssignedMonth(YearMonth month) {
+        ensureTable();
+        String sql = """
+                SELECT COALESCE(c.abreviatura, 'N/A') AS abrv,
+                       COUNT(*) AS rechazadas
+                FROM incidencia_inbox i
+                LEFT JOIN categoria c ON c.id = i.categoria_id
+                WHERE i.rechazada = true AND i.rechazada_at IS NOT NULL
+                  AND YEAR(i.rechazada_at) = ? AND MONTH(i.rechazada_at) = ?
+                GROUP BY c.abreviatura
+                """;
+        return jdbcTemplate.queryForList(sql, month.getYear(), month.getMonthValue());
+    }
+
+    public List<Map<String, Object>> technicianRejectedStats(YearMonth month) {
+        ensureTable();
+        String sql = """
+                SELECT tecnico_asignado AS tecnico, COUNT(*) AS rechazadas
+                FROM incidencia_inbox
+                WHERE rechazada = true AND rechazada_at IS NOT NULL
+                  AND YEAR(rechazada_at) = ? AND MONTH(rechazada_at) = ?
+                GROUP BY tecnico_asignado
+                ORDER BY tecnico_asignado
+                """;
+        return jdbcTemplate.queryForList(sql, month.getYear(), month.getMonthValue());
+    }
+
     private void ensureTable() {
         String ddl = "CREATE TABLE IF NOT EXISTS incidencia_inbox ("
                 + "id BIGINT AUTO_INCREMENT PRIMARY KEY,"
@@ -132,6 +160,7 @@ public class IncidenciaInboxRepository {
                 + "tecnico_asignado VARCHAR(150) NOT NULL,"
                 + "tecnico_email VARCHAR(255) NOT NULL,"
                 + "categoria_id BIGINT NULL,"
+                + "prioridad VARCHAR(20) NOT NULL DEFAULT 'NORMAL',"
                 + "resuelta BOOLEAN NOT NULL DEFAULT FALSE,"
                 + "en_progreso BOOLEAN NOT NULL DEFAULT FALSE,"
                 + "resolved_at TIMESTAMP NULL,"

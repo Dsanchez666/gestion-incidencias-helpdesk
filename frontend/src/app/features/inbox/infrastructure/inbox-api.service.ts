@@ -48,17 +48,18 @@ export class InboxApiService {
     return this.http.get<Tecnico[]>(this.tecnicosUrl);
   }
 
-  assignIncidencia(messageId: string, tecnicoNombre: string, summaryLength: number): Observable<void> {
+  assignIncidencia(messageId: string, tecnicoNombre: string, prioridad: string, summaryLength: number): Observable<void> {
     return this.http.post<void>(
       `${this.inboxUrl}/${encodeURIComponent(messageId)}/asignar-incidencia?summaryLength=${summaryLength}`,
-      { tecnicoNombre }
+      { tecnicoNombre, prioridad }
     );
   }
 
-  assignIncidencias(messageIds: string[], tecnicoNombre: string, summaryLength: number): Observable<void> {
+  assignIncidencias(messageIds: string[], tecnicoNombre: string, prioridad: string, summaryLength: number): Observable<void> {
     return this.http.post<void>(`${this.inboxUrl}/asignar-incidencias?summaryLength=${summaryLength}`, {
       messageIds,
-      tecnicoNombre
+      tecnicoNombre,
+      prioridad
     });
   }
 
@@ -84,6 +85,23 @@ export class InboxApiService {
 
   updateResuelta(incidenciaId: number, resuelta: boolean): Observable<void> {
     return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/resuelta`, { resuelta });
+  }
+  updatePrioridad(incidenciaId: number, prioridad: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/prioridad`, { prioridad });
+  }
+  redirectIncidencia(incidenciaId: number, tecnicoNombre: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/redirigir`, { tecnicoNombre });
+  }
+  resolveIncidencia(incidenciaId: number, descripcionResolucion: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/resolver`, { descripcionResolucion });
+  }
+  rejectResolution(incidenciaId: number, motivo: string): Observable<void> {
+    return this.http.patch<void>(`${this.inboxUrl}/incidencias/${incidenciaId}/rechazar-resolucion`, { motivo });
+  }
+  getSeguimiento(token: string): Observable<{ incidencia: IncidenciaInboxItem; historico: IncidenciaNota[]; tiempoResolucion: string }> {
+    return this.http.get<{ incidencia: IncidenciaInboxItem; historico: IncidenciaNota[]; tiempoResolucion: string }>(
+      `${this.inboxUrl}/incidencias/seguimiento/${encodeURIComponent(token)}`
+    );
   }
 
   getStats(): Observable<IncidenciasStatsResponse> {

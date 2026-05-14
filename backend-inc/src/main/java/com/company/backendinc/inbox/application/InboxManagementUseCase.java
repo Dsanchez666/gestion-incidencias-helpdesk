@@ -163,15 +163,14 @@ public class InboxManagementUseCase {
                 puedeVerCorreos);
     }
 
-    public void assignIncidencia(String messageId, String tecnicoNombre, int summaryLength) throws IOException {
+    public void assignIncidencia(String messageId, String tecnicoNombre, String prioridad, int summaryLength) throws IOException {
         Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
         if (tecnico == null) {
             throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
         }
 
-        List<InboxItem> inbox = listInbox(summaryLength);
-        InboxItem target = inbox.stream().filter(item -> messageId.equals(item.getMessageId())).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Correo no encontrado en bandeja"));
+        String prioridadNormalizada = normalizePrioridad(prioridad);
+        InboxItem target = getInboxItemById(messageId, summaryLength);
 
         repository.upsertIncidencia(messageId, true);
         repository.upsertAsignacion(messageId, true, tecnico.getNombre());
@@ -189,6 +188,9 @@ public class InboxManagementUseCase {
                 null,
                 null,
                 null,
+                prioridadNormalizada,
+                false,
+                false,
                 false,
                 false,
                 null);
@@ -198,13 +200,70 @@ public class InboxManagementUseCase {
                 target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
     }
 
-    public void assignIncidencias(List<String> messageIds, String tecnicoNombre, int summaryLength) throws IOException {
+    public void assignIncidencias(List<String> messageIds, String tecnicoNombre, String prioridad, int summaryLength) throws IOException {
         if (messageIds == null || messageIds.isEmpty()) {
             throw new IllegalArgumentException("No hay correos seleccionados");
         }
-        for (String messageId : messageIds) {
-            assignIncidencia(messageId, tecnicoNombre, summaryLength);
+        Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
+        if (tecnico == null) {
+            throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
         }
+        String prioridadNormalizada = normalizePrioridad(prioridad);
+        List<InboxItem> inbox = listInbox(summaryLength);
+        Map<String, InboxItem> byId = new HashMap<>();
+        for (InboxItem it : inbox) byId.put(it.getMessageId(), it);
+
+        for (String messageId : messageIds) {
+            InboxItem target = byId.get(messageId);
+            if (target == null) continue;
+
+            repository.upsertIncidencia(messageId, true);
+            repository.upsertAsignacion(messageId, true, tecnico.getNombre());
+
+            IncidenciaInboxItem incidencia = new IncidenciaInboxItem(
+                    null,
+                    target.getMessageId(),
+                    target.getMailbox(),
+                    target.getReceivedDateTime(),
+                    target.getSender(),
+                    target.getSubject(),
+                    target.getSummary(),
+                    tecnico.getNombre(),
+                    tecnico.getEmail(),
+                    null,
+                    null,
+                    null,
+                    prioridadNormalizada,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+            incidenciaInboxRepository.upsert(incidencia);
+            IncidenciaInboxItem creada = incidenciaInboxRepository.list().stream()
+                    .filter(i -> messageId.equals(i.getMessageId()))
+                    .findFirst().orElse(null);
+            if (creada != null) {
+                incidenciaHistoricoRepository.addEvento(creada.getId(), currentActor(),
+                        "Creada incidencia y asignada a " + tecnico.getNombre() + " con prioridad " + prioridadNormalizada);
+            }
+            byte[] originalEml = fetchOriginalMessageEml(target.getMailbox(), target.getMessageId());
+            notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender(),
+                    target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
+        }
+    }
+
+    private String normalizePrioridad(String prioridad) {
+        if (prioridad == null || prioridad.isBlank()) return "NORMAL";
+        String p = prioridad.trim().toUpperCase();
+        if (!List.of("URGENTE", "ALTA", "NORMAL", "BAJA").contains(p)) {
+            throw new IllegalArgumentException("Prioridad no valida");
+        }
+        return p;
     }
 
     public void updateCategoria(Long incidenciaId, Long categoriaId) {
@@ -213,6 +272,7 @@ public class InboxManagementUseCase {
             throw new IllegalArgumentException("Categoria no valida");
         }
         incidenciaInboxRepository.updateCategoria(incidenciaId, categoriaId);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Cambio de categoría a id=" + categoriaId);
     }
 
     public void updateTecnicoIncidencia(Long incidenciaId, String tecnicoNombre) {
@@ -221,10 +281,63 @@ public class InboxManagementUseCase {
             throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
         }
         incidenciaInboxRepository.updateTecnico(incidenciaId, tecnico.getNombre(), tecnico.getEmail());
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Reasignada a técnico " + tecnico.getNombre());
+    }
+
+    public void redirectIncidencia(Long incidenciaId, String tecnicoNombre) {
+        ensureNotConsulta();
+        Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
+        if (tecnico == null) {
+            throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
+        }
+        IncidenciaInboxItem inc = incidenciaInboxRepository.findById(incidenciaId);
+        if (inc == null) throw new IllegalArgumentException("Incidencia no encontrada");
+        incidenciaInboxRepository.updateTecnico(incidenciaId, tecnico.getNombre(), tecnico.getEmail());
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Redirigida incidencia a " + tecnico.getNombre());
+        notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), inc.getSubject(), inc.getSender(),
+                inc.getReceivedDateTime(), inc.getSummary(), inc.getMailbox(), null);
     }
 
     public void updateResuelta(Long incidenciaId, boolean resuelta) {
         incidenciaInboxRepository.updateResuelta(incidenciaId, resuelta);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), resuelta ? "Incidencia marcada como RESUELTA" : "Incidencia reabierta");
+    }
+
+    public void updatePrioridad(Long incidenciaId, String prioridad) {
+        String p = normalizePrioridad(prioridad);
+        incidenciaInboxRepository.updatePrioridad(incidenciaId, p);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Cambio de prioridad a " + p);
+    }
+
+    public void resolveIncidencia(Long incidenciaId, String descripcionResolucion) {
+        ensureNotConsulta();
+        if (descripcionResolucion == null || descripcionResolucion.isBlank()) {
+            throw new IllegalArgumentException("Descripcion de resolución obligatoria");
+        }
+        IncidenciaInboxItem inc = incidenciaInboxRepository.findById(incidenciaId);
+        if (inc == null) throw new IllegalArgumentException("Incidencia no encontrada");
+        String actor = currentActor();
+        incidenciaInboxRepository.resolveWithDescription(incidenciaId, descripcionResolucion, actor);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, actor, "Incidencia resuelta: " + descripcionResolucion);
+        String token = incidenciaTrackingRepository.createToken(incidenciaId);
+        String enlace = "http://localhost:4200/seguimiento/" + token;
+        notificationGateway.notifyResolutionToSender(inc.getSender(), inc.getSubject(), descripcionResolucion, enlace);
+    }
+
+    public void rejectResolution(Long incidenciaId, String motivo) {
+        if (motivo == null || motivo.isBlank()) throw new IllegalArgumentException("Motivo obligatorio");
+        IncidenciaInboxItem inc = incidenciaInboxRepository.findById(incidenciaId);
+        if (inc == null) throw new IllegalArgumentException("Incidencia no encontrada");
+        String actor = currentActor();
+        String actorUser = actor.contains("@") ? actor.substring(0, actor.indexOf('@')) : actor;
+        String senderUser = inc.getSender() != null && inc.getSender().contains("@")
+                ? inc.getSender().substring(0, inc.getSender().indexOf('@'))
+                : (inc.getSender() == null ? "" : inc.getSender());
+        if (!actorUser.equalsIgnoreCase(senderUser)) {
+            throw new IllegalArgumentException("Solo el remitente puede rechazar la resolución");
+        }
+        incidenciaInboxRepository.rejectResolution(incidenciaId, motivo, actor);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, actor, "Resolución rechazada: " + motivo);
     }
 
     public IncidenciasStatsResponse getStats() {
@@ -240,7 +353,7 @@ public class InboxManagementUseCase {
             String nombre = String.valueOf(row.get("nombre"));
             long total = ((Number) row.get("total")).longValue();
             long resueltas = ((Number) row.get("resueltas")).longValue();
-            merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, total, resueltas, total - resueltas, 0, 0, 0));
+            merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, total, resueltas, total - resueltas, 0, 0, 0, 0, 0));
         }
         for (Map<String, Object> row : previousCat) {
             String abrv = String.valueOf(row.get("abrv"));
@@ -249,12 +362,12 @@ public class InboxManagementUseCase {
             long resueltas = ((Number) row.get("resueltas")).longValue();
             IncidenciasStatsResponse.CategoryStatsItem existing = merged.get(abrv);
             if (existing == null) {
-                merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, 0, 0, 0, total, resueltas, total - resueltas));
+                merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(abrv, nombre, 0, 0, 0, 0, total, resueltas, total - resueltas, 0));
             } else {
                 merged.put(abrv, new IncidenciasStatsResponse.CategoryStatsItem(
                         existing.categoriaAbreviatura(), existing.categoriaNombre(),
-                        existing.actualTotal(), existing.actualResueltas(), existing.actualSinResolver(),
-                        total, resueltas, total - resueltas));
+                        existing.actualTotal(), existing.actualResueltas(), existing.actualSinResolver(), existing.actualRechazadas(),
+                        total, resueltas, total - resueltas, existing.anteriorRechazadas()));
             }
         }
 
@@ -262,27 +375,41 @@ public class InboxManagementUseCase {
         Map<String, Long> previousAssigned = toMap(incidenciaInboxRepository.technicianAssignedStats(previous), "asignadas");
         Map<String, Long> currentResolved = toMap(incidenciaInboxRepository.technicianResolvedStats(current), "resueltas");
         Map<String, Long> previousResolved = toMap(incidenciaInboxRepository.technicianResolvedStats(previous), "resueltas");
+        Map<String, Long> currentRejectedTech = toMap(incidenciaInboxRepository.technicianRejectedStats(current), "rechazadas");
+        Map<String, Long> previousRejectedTech = toMap(incidenciaInboxRepository.technicianRejectedStats(previous), "rechazadas");
+        Map<String, Long> currentRejectedCat = toMapByKey(incidenciaInboxRepository.categoryRejectedStatsByAssignedMonth(current), "abrv", "rechazadas");
+        Map<String, Long> previousRejectedCat = toMapByKey(incidenciaInboxRepository.categoryRejectedStatsByAssignedMonth(previous), "abrv", "rechazadas");
 
         Map<String, IncidenciasStatsResponse.TechnicianStatsItem> techMerged = new HashMap<>();
         for (String tech : currentAssigned.keySet()) {
             techMerged.put(tech, new IncidenciasStatsResponse.TechnicianStatsItem(
-                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L),
-                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L)));
+                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L), currentRejectedTech.getOrDefault(tech, 0L),
+                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L), previousRejectedTech.getOrDefault(tech, 0L)));
         }
         for (String tech : previousAssigned.keySet()) {
             techMerged.putIfAbsent(tech, new IncidenciasStatsResponse.TechnicianStatsItem(
-                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L),
-                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L)));
+                    tech, currentAssigned.getOrDefault(tech, 0L), currentResolved.getOrDefault(tech, 0L), currentRejectedTech.getOrDefault(tech, 0L),
+                    previousAssigned.getOrDefault(tech, 0L), previousResolved.getOrDefault(tech, 0L), previousRejectedTech.getOrDefault(tech, 0L)));
+        }
+
+        for (Map.Entry<String, IncidenciasStatsResponse.CategoryStatsItem> e : new ArrayList<>(merged.entrySet())) {
+            var c = e.getValue();
+            merged.put(e.getKey(), new IncidenciasStatsResponse.CategoryStatsItem(
+                    c.categoriaAbreviatura(), c.categoriaNombre(),
+                    c.actualTotal(), c.actualResueltas(), c.actualSinResolver(), currentRejectedCat.getOrDefault(e.getKey(), 0L),
+                    c.anteriorTotal(), c.anteriorResueltas(), c.anteriorSinResolver(), previousRejectedCat.getOrDefault(e.getKey(), 0L)));
         }
 
         long currentTotal = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::actualTotal).sum();
         long currentRes = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::actualResueltas).sum();
+        long currentRech = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::actualRechazadas).sum();
         long prevTotal = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::anteriorTotal).sum();
         long prevRes = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::anteriorResueltas).sum();
+        long prevRech = merged.values().stream().mapToLong(IncidenciasStatsResponse.CategoryStatsItem::anteriorRechazadas).sum();
 
         IncidenciasStatsResponse.TotalsStatsItem totals = new IncidenciasStatsResponse.TotalsStatsItem(
-                currentTotal, currentRes, currentTotal - currentRes,
-                prevTotal, prevRes, prevTotal - prevRes);
+                currentTotal, currentRes, currentTotal - currentRes, currentRech,
+                prevTotal, prevRes, prevTotal - prevRes, prevRech);
 
         return new IncidenciasStatsResponse(
                 current.toString(),
@@ -343,5 +470,44 @@ public class InboxManagementUseCase {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    private InboxItem getInboxItemById(String messageId, int summaryLength) throws IOException {
+        String accessToken = tokenStore.getValidAccessToken()
+                .orElseThrow(() -> new IllegalStateException("Login requerido"));
+
+        MailboxConfig config = mailboxConfigPort.load();
+        String graphBaseUrl = config.getGraphBaseUrl() == null || config.getGraphBaseUrl().isBlank()
+                ? "https://graph.microsoft.com/v1.0"
+                : config.getGraphBaseUrl();
+        List<MailboxEntry> mailboxes = config.getMailboxes();
+        if (mailboxes == null || mailboxes.isEmpty()) {
+            throw new IllegalArgumentException("No hay buzones configurados");
+        }
+        MailboxEntry mailbox = mailboxes.get(0);
+
+        String url = UriComponentsBuilder.fromHttpUrl(graphBaseUrl)
+                .path("/users/{id}/messages/{messageId}")
+                .queryParam("$select", "id,subject,from,receivedDateTime,bodyPreview")
+                .buildAndExpand(mailbox.getDireccionCorreo(), messageId)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        JsonNode node = objectMapper.readTree(response.getBody());
+        String bodyPreview = node.path("bodyPreview").asText("");
+        String summary = bodyPreview.length() > summaryLength ? bodyPreview.substring(0, summaryLength) : bodyPreview;
+
+        return new InboxItem(
+                node.path("id").asText(""),
+                mailbox.getDireccionCorreo(),
+                node.path("receivedDateTime").asText(""),
+                node.path("from").path("emailAddress").path("address").asText(""),
+                node.path("subject").asText(""),
+                summary,
+                false,
+                false,
+                "");
     }
 }

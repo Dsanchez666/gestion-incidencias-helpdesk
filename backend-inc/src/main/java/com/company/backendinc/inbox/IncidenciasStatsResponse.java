@@ -30,22 +30,28 @@ public class IncidenciasStatsResponse {
             long actualTotal,
             long actualResueltas,
             long actualSinResolver,
+            long actualRechazadas,
             long anteriorTotal,
             long anteriorResueltas,
-            long anteriorSinResolver) {}
+            long anteriorSinResolver,
+            long anteriorRechazadas) {}
 
     public record TechnicianStatsItem(
             String tecnicoNombre,
             long actualAsignadas,
             long actualResueltas,
+            long actualRechazadas,
             long anteriorAsignadas,
-            long anteriorResueltas) {}
+            long anteriorResueltas,
+            long anteriorRechazadas) {}
 
     public record TotalsStatsItem(
             long actualTotal,
             long actualResueltas,
             long actualSinResolver,
+            long actualRechazadas,
             long anteriorTotal,
             long anteriorResueltas,
-            long anteriorSinResolver) {}
+            long anteriorSinResolver,
+            long anteriorRechazadas) {}
 }

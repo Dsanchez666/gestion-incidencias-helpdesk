@@ -13,6 +13,7 @@ public class IncidenciaInboxItem {
     private Long categoriaId;
     private String categoriaAbreviatura;
     private String categoriaColorHex;
+    private String prioridad;
     private boolean resuelta;
     private boolean enProgreso;
     private String assignedAt;
@@ -34,6 +35,7 @@ public class IncidenciaInboxItem {
         this.categoriaId = categoriaId;
         this.categoriaAbreviatura = categoriaAbreviatura;
         this.categoriaColorHex = categoriaColorHex;
+        this.prioridad = prioridad;
         this.resuelta = resuelta;
         this.enProgreso = enProgreso;
         this.assignedAt = assignedAt;
@@ -51,6 +53,7 @@ public class IncidenciaInboxItem {
     public Long getCategoriaId() { return categoriaId; }
     public String getCategoriaAbreviatura() { return categoriaAbreviatura; }
     public String getCategoriaColorHex() { return categoriaColorHex; }
+    public String getPrioridad() { return prioridad; }
     public boolean isResuelta() { return resuelta; }
     public boolean isEnProgreso() { return enProgreso; }
     public String getAssignedAt() { return assignedAt; }

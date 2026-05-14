@@ -66,6 +66,7 @@ export class InboxComponent {
   selectedCategoriaByIncidenciaId: Record<number, number> = {};
   selectedTecnicoByIncidenciaId: Record<number, string> = {};
   selectedResueltaByIncidenciaId: Record<number, boolean> = {};
+  selectedPrioridadByIncidenciaId: Record<number, string> = {};
   savingIncidencias = false;
   incidenciasTextFilter = '';
   showAdminModal = false;
@@ -80,6 +81,12 @@ export class InboxComponent {
   editCategoriaAbreviatura = '';
   editCategoriaColorHex = '#f3f4f6';
   assigningByMessageId: Record<string, boolean> = {};
+  assigningBulk = false;
+  pendingSingleAssign: InboxItem | null = null;
+  showPrioridadModal = false;
+  pendingPrioridad: 'URGENTE' | 'ALTA' | 'NORMAL' | 'BAJA' = 'NORMAL';
+  assignFeedback = '';
+  assignFeedbackType: 'success' | 'error' | 'info' | '' = '';
   selectedMessageIds = new Set<string>();
   bulkTecnicoNombre = '';
   pendingSort: { key: PendingSortKey; dir: SortDir } = { key: 'receivedDateTime', dir: 'desc' };
@@ -128,11 +135,16 @@ export class InboxComponent {
     const filtered = this.incidencias.filter((i) => {
       if (!this.incidenciasTextFilter) return true;
       const t = this.incidenciasTextFilter.toLowerCase();
-      return `${i.subject} ${i.sender} ${i.tecnicoAsignado} ${i.categoriaAbreviatura ?? ''}`.toLowerCase().includes(t);
+      return `${i.subject} ${i.sender} ${i.tecnicoAsignado} ${i.categoriaAbreviatura ?? ''} ${i.prioridad ?? 'NORMAL'} ${i.receivedDateTime ?? ''}`
+        .toLowerCase()
+        .includes(t);
     });
-    return [...filtered].sort((a, b) =>
-      this.compareValues(a[this.incidenciasSort.key], b[this.incidenciasSort.key], this.incidenciasSort.dir)
-    );
+    return [...filtered].sort((a, b) => {
+      const pa = this.priorityRank(a.prioridad);
+      const pb = this.priorityRank(b.prioridad);
+      if (pa !== pb) return pa - pb;
+      return this.toMillis(a.assignedAt) - this.toMillis(b.assignedAt);
+    });
   }
 
   get pendingShownCount(): number {
@@ -146,6 +158,16 @@ export class InboxComponent {
   }
   get incidenciasTotalCount(): number {
     return this.incidencias.length;
+  }
+  get isTecnicoProfile(): boolean {
+    const perfil = (this.context.perfil ?? '').toUpperCase();
+    return perfil === 'TECNICO' || perfil === 'RESOLUTOR';
+  }
+  get isReadOnlyIncidenciasProfile(): boolean {
+    return (this.context.perfil ?? '').toUpperCase() !== 'ADMIN';
+  }
+  get isConsultaProfile(): boolean {
+    return (this.context.perfil ?? '').toUpperCase() === 'CONSULTA';
   }
 
   togglePendingSort(key: PendingSortKey): void {
@@ -163,13 +185,32 @@ export class InboxComponent {
 
   assignSelectedIncidencias(): void {
     const messageIds = Array.from(this.selectedMessageIds);
-    if (messageIds.length === 0 || !this.bulkTecnicoNombre) return;
-    this.inboxApi.assignIncidencias(messageIds, this.bulkTecnicoNombre, this.summaryLength).subscribe({
+    if (messageIds.length === 0 || !this.bulkTecnicoNombre || this.assigningBulk) return;
+    if (this.context.perfil === 'ADMIN') {
+      this.pendingSingleAssign = null;
+      this.openPrioridadModal();
+      return;
+    }
+    this.executeBulkAssign('NORMAL');
+  }
+
+  private executeBulkAssign(prioridad: string): void {
+    const messageIds = Array.from(this.selectedMessageIds);
+    if (messageIds.length === 0 || !this.bulkTecnicoNombre || this.assigningBulk) return;
+    this.assigningBulk = true;
+    this.setAssignFeedback(`Procesando creación de ${messageIds.length} incidencia(s)...`, 'info');
+    this.inboxApi.assignIncidencias(messageIds, this.bulkTecnicoNombre, prioridad, this.summaryLength).subscribe({
       next: () => {
         this.bulkTecnicoNombre = '';
         this.selectedMessageIds.clear();
+        this.assigningBulk = false;
+        this.setAssignFeedback(`Incidencias creadas correctamente: ${messageIds.length}.`, 'success');
         this.refresh();
         this.loadIncidencias();
+      },
+      error: (err) => {
+        this.assigningBulk = false;
+        this.setAssignFeedback(`Error al crear incidencias: ${this.extractErrorMessage(err)}`, 'error');
       }
     });
   }
@@ -177,18 +218,35 @@ export class InboxComponent {
   assignIncidencia(item: InboxItem): void {
     const tecnicoNombre = this.selectedTecnicoByMessageId[item.messageId] ?? '';
     if (!tecnicoNombre) return;
+    if (this.context.perfil === 'ADMIN') {
+      this.pendingSingleAssign = item;
+      this.openPrioridadModal();
+      return;
+    }
+    this.executeSingleAssign(item, 'NORMAL');
+  }
+
+  private executeSingleAssign(item: InboxItem, prioridad: string): void {
+    const tecnicoNombre = this.selectedTecnicoByMessageId[item.messageId] ?? '';
+    if (!tecnicoNombre) return;
     this.assigningByMessageId[item.messageId] = true;
-    this.inboxApi.assignIncidencia(item.messageId, tecnicoNombre, this.summaryLength).subscribe({
+    this.setAssignFeedback('Procesando creación de incidencia...', 'info');
+    this.inboxApi.assignIncidencia(item.messageId, tecnicoNombre, prioridad, this.summaryLength).subscribe({
       next: () => {
         this.assigningByMessageId[item.messageId] = false;
+        this.setAssignFeedback('Incidencia creada correctamente.', 'success');
         this.refresh();
         this.loadIncidencias();
       },
-      error: () => (this.assigningByMessageId[item.messageId] = false)
+      error: (err) => {
+        this.assigningByMessageId[item.messageId] = false;
+        this.setAssignFeedback(`Error al crear incidencia: ${this.extractErrorMessage(err)}`, 'error');
+      }
     });
   }
 
   saveIncidenciasPendientes(): void {
+    if (this.isTecnicoProfile) return;
     const categoriaChanges = this.incidencias
       .map((inc) => ({ id: inc.id, actual: inc.categoriaId ?? null, nuevo: this.selectedCategoriaByIncidenciaId[inc.id] ?? null }))
       .filter((x) => x.nuevo !== x.actual && x.nuevo !== null);
@@ -198,8 +256,11 @@ export class InboxComponent {
     const resueltaChanges = this.incidencias
       .map((inc) => ({ id: inc.id, actual: inc.resuelta, nuevo: this.selectedResueltaByIncidenciaId[inc.id] ?? inc.resuelta }))
       .filter((x) => x.nuevo !== x.actual);
+    const prioridadChanges = this.incidencias
+      .map((inc) => ({ id: inc.id, actual: (inc.prioridad ?? 'NORMAL').toUpperCase(), nuevo: (this.selectedPrioridadByIncidenciaId[inc.id] ?? inc.prioridad ?? 'NORMAL').toUpperCase() }))
+      .filter((x) => x.nuevo !== x.actual);
 
-    const totalOps = categoriaChanges.length + tecnicoChanges.length + resueltaChanges.length;
+    const totalOps = categoriaChanges.length + tecnicoChanges.length + resueltaChanges.length + prioridadChanges.length;
     if (totalOps === 0) return;
 
     this.savingIncidencias = true;
@@ -215,6 +276,7 @@ export class InboxComponent {
     categoriaChanges.forEach((c) => this.inboxApi.updateCategoria(c.id, c.nuevo as number).subscribe({ next: done, error: done }));
     tecnicoChanges.forEach((t) => this.inboxApi.updateIncidenciaTecnico(t.id, t.nuevo).subscribe({ next: done, error: done }));
     resueltaChanges.forEach((r) => this.inboxApi.updateResuelta(r.id, r.nuevo).subscribe({ next: done, error: done }));
+    prioridadChanges.forEach((p) => this.inboxApi.updatePrioridad(p.id, p.nuevo).subscribe({ next: done, error: done }));
   }
 
   categorizarAutomatico(): void {}
@@ -357,11 +419,62 @@ export class InboxComponent {
       if (this.filters.summary && !item.summary.toLowerCase().includes(this.filters.summary.toLowerCase())) return false;
       if (this.filters.tecnico && !(item.tecnicoAsignado ?? '').toLowerCase().includes(this.filters.tecnico.toLowerCase())) return false;
       if (this.filters.generic) {
-        const allText = `${item.sender} ${item.subject} ${item.summary} ${item.tecnicoAsignado ?? ''}`.toLowerCase();
+        const received = new Date(item.receivedDateTime);
+        const dateDdMmYyyy = Number.isNaN(received.getTime())
+          ? ''
+          : `${String(received.getDate()).padStart(2, '0')}/${String(received.getMonth() + 1).padStart(2, '0')}/${received.getFullYear()}`;
+        const dateDdMmYyyyHhMm = Number.isNaN(received.getTime())
+          ? ''
+          : `${dateDdMmYyyy} ${String(received.getHours()).padStart(2, '0')}:${String(received.getMinutes()).padStart(2, '0')}`;
+        const allText =
+          `${item.sender} ${item.subject} ${item.summary} ${item.tecnicoAsignado ?? ''} ${item.receivedDateTime ?? ''} ${dateDdMmYyyy} ${dateDdMmYyyyHhMm}`
+            .toLowerCase();
         if (!allText.includes(this.filters.generic.toLowerCase())) return false;
       }
       return true;
     });
+  }
+
+  redirigirIncidencia(): void {
+    if (!this.selectedIncidencia || !this.redirigirTecnico) return;
+    this.inboxApi.redirectIncidencia(this.selectedIncidencia.id, this.redirigirTecnico).subscribe({
+      next: () => {
+        this.openTreatmentModal(this.selectedIncidencia as IncidenciaInboxItem);
+        this.loadIncidencias();
+      }
+    });
+  }
+
+  resolverIncidencia(): void {
+    if (!this.selectedIncidencia || !this.resolucionDescripcion) return;
+    this.inboxApi.resolveIncidencia(this.selectedIncidencia.id, this.resolucionDescripcion).subscribe({
+      next: () => {
+        this.resolucionDescripcion = '';
+        this.openTreatmentModal(this.selectedIncidencia as IncidenciaInboxItem);
+        this.loadIncidencias();
+      }
+    });
+  }
+
+  rechazarResolucion(): void {
+    if (!this.selectedIncidencia || !this.rechazoMotivo) return;
+    this.inboxApi.rejectResolution(this.selectedIncidencia.id, this.rechazoMotivo).subscribe({
+      next: () => {
+        this.rechazoMotivo = '';
+        this.openTreatmentModal(this.selectedIncidencia as IncidenciaInboxItem);
+        this.loadIncidencias();
+      }
+    });
+  }
+
+  elapsedFromReceived(inc: IncidenciaInboxItem): string {
+    const start = Date.parse(inc.receivedDateTime ?? '');
+    if (Number.isNaN(start)) return '';
+    const diffMin = Math.max(0, Math.floor((Date.now() - start) / 60000));
+    const d = Math.floor(diffMin / (60 * 24));
+    const h = Math.floor((diffMin % (60 * 24)) / 60);
+    const m = diffMin % 60;
+    return `${d}d ${h}h ${m}m`;
   }
 
   private compareValues(a: unknown, b: unknown, dir: SortDir): number {
@@ -388,6 +501,7 @@ export class InboxComponent {
           if (it.categoriaId) this.selectedCategoriaByIncidenciaId[it.id] = it.categoriaId;
           this.selectedTecnicoByIncidenciaId[it.id] = it.tecnicoAsignado;
           this.selectedResueltaByIncidenciaId[it.id] = it.resuelta;
+          this.selectedPrioridadByIncidenciaId[it.id] = (it.prioridad ?? 'NORMAL').toUpperCase();
         }
       },
       error: () => (this.incidencias = [])
@@ -404,5 +518,56 @@ export class InboxComponent {
   logout(): void {
     this.logoutUseCase.execute();
     this.router.navigateByUrl('/login');
+  }
+
+  openPrioridadModal(): void {
+    this.pendingPrioridad = 'NORMAL';
+    this.showPrioridadModal = true;
+  }
+
+  closePrioridadModal(): void {
+    this.showPrioridadModal = false;
+    this.pendingSingleAssign = null;
+  }
+
+  confirmPrioridadAsignacion(): void {
+    const prioridad = this.pendingPrioridad;
+    const single = this.pendingSingleAssign;
+    this.closePrioridadModal();
+    if (single) {
+      this.executeSingleAssign(single, prioridad);
+      return;
+    }
+    this.executeBulkAssign(prioridad);
+  }
+
+  private setAssignFeedback(message: string, type: 'success' | 'error' | 'info' | ''): void {
+    this.assignFeedback = message;
+    this.assignFeedbackType = type;
+  }
+
+  private extractErrorMessage(err: unknown): string {
+    const fallback = 'Error desconocido';
+    if (!err || typeof err !== 'object') return fallback;
+    const errorObj = err as { error?: { message?: string } | string; message?: string; status?: number; statusText?: string };
+    if (typeof errorObj.error === 'string' && errorObj.error.trim()) return errorObj.error;
+    if (typeof errorObj.error === 'object' && errorObj.error?.message) return errorObj.error.message;
+    if (errorObj.message) return errorObj.message;
+    if (errorObj.status) return `${errorObj.status}${errorObj.statusText ? ` ${errorObj.statusText}` : ''}`;
+    return fallback;
+  }
+
+  private priorityRank(prioridad: string | undefined): number {
+    const p = (prioridad ?? 'NORMAL').toUpperCase();
+    if (p === 'URGENTE') return 0;
+    if (p === 'ALTA') return 1;
+    if (p === 'NORMAL') return 2;
+    if (p === 'BAJA') return 3;
+    return 4;
+  }
+
+  private toMillis(value: string | undefined): number {
+    const ms = Date.parse(value ?? '');
+    return Number.isNaN(ms) ? Number.MAX_SAFE_INTEGER : ms;
   }
 }

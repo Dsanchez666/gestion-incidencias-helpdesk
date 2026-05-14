@@ -1,4 +1,4 @@
-<main class="inbox-shell">
+<main class="inbox-shell" [class.no-mailbox]="!context.puedeVerCorreos">
   <header class="top-header">
     <div>
       <h1>{{ context.appName }}</h1>
@@ -11,29 +11,40 @@
       <button class="danger" (click)="logout()">Sign-out</button>
     </div>
   </header>
+  <section
+    *ngIf="assignFeedback"
+    class="notice assign-feedback global-feedback"
+    [class.error]="assignFeedbackType === 'error'"
+    [class.success]="assignFeedbackType === 'success'"
+    [class.info]="assignFeedbackType === 'info'"
+  >
+    {{ assignFeedback }}
+  </section>
 
   <section class="filters-row" *ngIf="context.puedeVerCorreos">
-    <div class="global-filter-line">
-      <label><input type="checkbox" [(ngModel)]="hideAutomatic" /> Ocultar correos Automaticos</label>
+    <div class="field-filters-line single-row">
       <input placeholder="Filtro global..." [(ngModel)]="filters.generic" />
-      <button class="secondary" (click)="refresh()">Recargar</button>
-    </div>
-    <div class="field-filters-line">
       <input placeholder="Filtro remitente" [(ngModel)]="filters.sender" />
       <input placeholder="Filtro subject" [(ngModel)]="filters.subject" />
       <input placeholder="Filtro resumen" [(ngModel)]="filters.summary" />
       <input placeholder="Filtro tecnico" [(ngModel)]="filters.tecnico" />
+      <label class="inline-check"><input type="checkbox" [(ngModel)]="hideAutomatic" /> Ocultar correos Automaticos</label>
+      <button class="secondary" (click)="refresh()">Recargar</button>
     </div>
   </section>
 
   <section class="pending-panel" *ngIf="context.puedeVerCorreos">
-    <h2>Correos pendientes de convertir en incidencia ({{ pendingShownCount }}/{{ pendingTotalCount }} mostrados)</h2>
-    <div class="bulk-row">
-      <select [(ngModel)]="bulkTecnicoNombre">
-        <option value="">Asignar seleccionados a tecnico...</option>
-        <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
-      </select>
-      <button class="secondary" (click)="assignSelectedIncidencias()">Asignar seleccionados</button>
+    <div class="pending-head">
+      <h2>Correos pendientes de convertir en incidencia ({{ pendingShownCount }}/{{ pendingTotalCount }} mostrados)</h2>
+      <div class="bulk-row">
+        <select [(ngModel)]="bulkTecnicoNombre">
+          <option value="">Asignar seleccionados a tecnico...</option>
+          <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+        </select>
+        <button class="secondary" [disabled]="assigningBulk" (click)="assignSelectedIncidencias()">
+          {{ assigningBulk ? 'Asignando...' : 'Asignar seleccionados' }}
+        </button>
+      </div>
     </div>
     <section *ngIf="loading" class="notice">Cargando correos recibidos...</section>
     <section *ngIf="error" class="error">{{ error }}</section>
@@ -80,19 +91,21 @@
 
   <section class="incidencias-panel" [class.full-height]="!context.puedeVerCorreos">
     <div class="inc-head">
-      <h2>Incidencias asignadas ({{ incidenciasShownCount }}/{{ incidenciasTotalCount }} mostradas)</h2>
+      <div class="inc-title-row">
+        <h2>Incidencias asignadas ({{ incidenciasShownCount }}/{{ incidenciasTotalCount }} mostradas)</h2>
+        <div class="inc-filter-row">
+          <input placeholder="Filtrar incidencias por texto libre..." [(ngModel)]="incidenciasTextFilter" />
+        </div>
+      </div>
       <div class="inc-actions">
         <button class="secondary" (click)="categorizarAutomatico()">Categorización Automática</button>
         <button class="secondary" (click)="openStats()">Estadísticas</button>
         <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('tecnico')">+ Técnico</button>
         <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('categoria')">+ Categoría</button>
-        <button class="secondary" [disabled]="savingIncidencias" (click)="saveIncidenciasPendientes()">
+        <button class="secondary" [disabled]="savingIncidencias || isReadOnlyIncidenciasProfile" (click)="saveIncidenciasPendientes()">
           {{ savingIncidencias ? 'Guardando...' : 'Guardar Cambios' }}
         </button>
       </div>
-    </div>
-    <div class="inc-filter-row">
-      <input placeholder="Filtrar incidencias por texto libre..." [(ngModel)]="incidenciasTextFilter" />
     </div>
     <p *ngIf="!context.puedeVerCorreos" class="notice">Perfil {{ context.perfil }}: vista solo de incidencias asignadas.</p>
     <div class="cards-grid">
@@ -101,20 +114,29 @@
           <strong>{{ inc.subject }}</strong>
           <span class="mono">{{ inc.categoriaAbreviatura || 'N/A' }} | {{ inc.enProgreso && !inc.resuelta ? 'CORRIGIENDOSE' : (inc.resuelta ? 'RESUELTA' : 'ASIGNADA') }}</span>
         </header>
+        <div class="inc-elapsed">{{ elapsedFromReceived(inc) }}</div>
         <div class="inc-meta">
           <span>{{ inc.sender }}</span>
-          <span>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }}</span>
+          <span>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }} · {{ inc.prioridad || 'NORMAL' }} ·</span>
         </div>
         <div class="inc-controls">
           <label>Técnico
-            <select [(ngModel)]="selectedTecnicoByIncidenciaId[inc.id]">
+            <select [(ngModel)]="selectedTecnicoByIncidenciaId[inc.id]" [disabled]="isReadOnlyIncidenciasProfile">
               <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
             </select>
           </label>
           <label>Categoría
-            <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]">
+            <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]" [disabled]="isReadOnlyIncidenciasProfile">
               <option [ngValue]="null">Sin categoría</option>
               <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.abreviatura }}</option>
+            </select>
+          </label>
+          <label *ngIf="context.perfil === 'ADMIN'">Prioridad
+            <select [(ngModel)]="selectedPrioridadByIncidenciaId[inc.id]">
+              <option value="URGENTE">URGENTE</option>
+              <option value="ALTA">ALTA</option>
+              <option value="NORMAL">NORMAL</option>
+              <option value="BAJA">BAJA</option>
             </select>
           </label>
           <button class="secondary icon-btn" *ngIf="context.perfil === 'ADMIN'" (click)="startEditCategoria(selectedCategoriaByIncidenciaId[inc.id])">✎</button>
@@ -135,14 +157,14 @@
       <button class="danger" (click)="closeStats()">Cerrar</button>
     </header>
     <p>Comparativa <strong>{{ stats.currentMonth }}</strong> vs <strong>{{ stats.previousMonth }}</strong></p>
-    <h4>Categorías (resueltas / sin resolver)</h4>
+    <h4>Categorías (resueltas / sin resolver / rechazadas)</h4>
     <table>
       <thead><tr><th>Categoría</th><th>Actual</th><th>Anterior</th></tr></thead>
       <tbody>
         <tr *ngFor="let c of stats.categorias">
           <td>{{ c.categoriaAbreviatura }} - {{ c.categoriaNombre }}</td>
-          <td>{{ c.actualTotal }} ({{ c.actualResueltas }}/{{ c.actualSinResolver }})</td>
-          <td>{{ c.anteriorTotal }} ({{ c.anteriorResueltas }}/{{ c.anteriorSinResolver }})</td>
+          <td>{{ c.actualTotal }} ({{ c.actualResueltas }}/{{ c.actualSinResolver }}/{{ c.actualRechazadas || 0 }})</td>
+          <td>{{ c.anteriorTotal }} ({{ c.anteriorResueltas }}/{{ c.anteriorSinResolver }}/{{ c.anteriorRechazadas || 0 }})</td>
         </tr>
       </tbody>
     </table>
@@ -152,14 +174,72 @@
       <tbody>
         <tr *ngFor="let t of stats.tecnicos">
           <td>{{ t.tecnicoNombre }}</td>
-          <td>Asignadas {{ t.actualAsignadas }} / Resueltas {{ t.actualResueltas }}</td>
-          <td>Asignadas {{ t.anteriorAsignadas }} / Resueltas {{ t.anteriorResueltas }}</td>
+          <td>Asignadas {{ t.actualAsignadas }} / Resueltas {{ t.actualResueltas }} / Rechazadas {{ t.actualRechazadas || 0 }}</td>
+          <td>Asignadas {{ t.anteriorAsignadas }} / Resueltas {{ t.anteriorResueltas }} / Rechazadas {{ t.anteriorRechazadas || 0 }}</td>
         </tr>
       </tbody>
     </table>
     <h4>Totalizador</h4>
-    <p>Actual: {{ stats.totalizador.actualTotal }} ({{ stats.totalizador.actualResueltas }} resueltas / {{ stats.totalizador.actualSinResolver }} sin resolver)</p>
-    <p>Anterior: {{ stats.totalizador.anteriorTotal }} ({{ stats.totalizador.anteriorResueltas }} resueltas / {{ stats.totalizador.anteriorSinResolver }} sin resolver)</p>
+    <p>Actual: {{ stats.totalizador.actualTotal }} ({{ stats.totalizador.actualResueltas }} resueltas / {{ stats.totalizador.actualSinResolver }} sin resolver / {{ stats.totalizador.actualRechazadas || 0 }} rechazadas)</p>
+    <p>Anterior: {{ stats.totalizador.anteriorTotal }} ({{ stats.totalizador.anteriorResueltas }} resueltas / {{ stats.totalizador.anteriorSinResolver }} sin resolver / {{ stats.totalizador.anteriorRechazadas || 0 }} rechazadas)</p>
+  </article>
+</section>
+
+<section class="admin-modal" *ngIf="showPrioridadModal && context.perfil === 'ADMIN'">
+  <article class="admin-dialog">
+    <header>
+      <h3>Asignar Prioridad</h3>
+      <button class="danger" (click)="closePrioridadModal()">Cerrar</button>
+    </header>
+    <section class="form-grid">
+      <label>Prioridad</label>
+      <select [(ngModel)]="pendingPrioridad">
+        <option value="URGENTE">URGENTE</option>
+        <option value="ALTA">ALTA</option>
+        <option value="NORMAL">NORMAL</option>
+        <option value="BAJA">BAJA</option>
+      </select>
+      <button class="secondary" (click)="confirmPrioridadAsignacion()">Confirmar asignación</button>
+    </section>
+  </article>
+</section>
+
+<section class="treatment-modal" *ngIf="showTreatmentModal && selectedIncidencia">
+  <article class="treatment-dialog">
+    <header>
+      <h3>Tratamiento de Incidencia</h3>
+      <button class="danger" (click)="closeTreatmentModal()">Cerrar</button>
+    </header>
+    <p><strong>Asunto:</strong> {{ selectedIncidencia.subject }}</p>
+    <p><strong>Remitente:</strong> {{ selectedIncidencia.sender }}</p>
+    <p><strong>Tiempo transcurrido:</strong> {{ elapsedFromReceived(selectedIncidencia) }}</p>
+    <div class="form-grid">
+      <select *ngIf="!isConsultaProfile" [(ngModel)]="notaTecnico">
+        <option value="">Técnico</option>
+        <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+      </select>
+      <input *ngIf="!isConsultaProfile" placeholder="Observación" [(ngModel)]="notaObservacion" />
+      <input *ngIf="!isConsultaProfile" placeholder="Acción realizada" [(ngModel)]="notaAccion" />
+      <textarea *ngIf="!isConsultaProfile" placeholder="Detalle técnico / informe" [(ngModel)]="notaDetalle"></textarea>
+      <button class="secondary" *ngIf="!isConsultaProfile" (click)="addNotaTratamiento()">Guardar Nota</button>
+      <select *ngIf="context.perfil === 'ADMIN'" [(ngModel)]="redirigirTecnico">
+        <option value="">Redirigir a técnico...</option>
+        <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
+      </select>
+      <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="redirigirIncidencia()">Redirigir</button>
+      <textarea *ngIf="!isConsultaProfile" placeholder="Descripción de resolución" [(ngModel)]="resolucionDescripcion"></textarea>
+      <button class="secondary" *ngIf="!isConsultaProfile" (click)="resolverIncidencia()">Resolver</button>
+      <textarea *ngIf="context.perfil === 'CONSULTA'" placeholder="Motivo de rechazo" [(ngModel)]="rechazoMotivo"></textarea>
+      <button class="danger" *ngIf="context.perfil === 'CONSULTA'" (click)="rechazarResolucion()">Rechazar resolución</button>
+    </div>
+    <h4>Histórico de tratamiento</h4>
+    <div class="notes-timeline">
+      <article *ngFor="let n of notasIncidencia" class="note-item">
+        <div><strong>{{ n.createdAt | date: 'dd/MM/yyyy HH:mm' }}</strong> · {{ n.accionRealizada }}</div>
+        <div><strong>Cambio:</strong> {{ n.detalle || n.observacion }}</div>
+        <div><strong>Quién:</strong> {{ n.tecnico }}</div>
+      </article>
+    </div>
   </article>
 </section>
 
