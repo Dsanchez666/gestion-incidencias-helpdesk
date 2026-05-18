@@ -2,6 +2,7 @@ package com.company.backendinc.auth.entra;
 
 import com.company.backendinc.auth.entra.application.EntraAuthenticationUseCase;
 import com.company.backendinc.auth.entra.application.UseCaseResult;
+import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,12 +33,12 @@ public class EntraIdTestController {
     }
 
     @PostMapping(value = "/test", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<EntraLoginResponse> test(@RequestBody EntraLoginRequest request) {
+    public ResponseEntity<EntraLoginResponse> test(@Valid @RequestBody EntraLoginRequest request) {
         return toResponse(authenticationUseCase.testCredentials(request));
     }
 
     @PostMapping(value = "/test", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public ResponseEntity<EntraLoginResponse> testForm(@ModelAttribute EntraLoginRequest request) {
+    public ResponseEntity<EntraLoginResponse> testForm(@Valid @ModelAttribute EntraLoginRequest request) {
         return toResponse(authenticationUseCase.testCredentials(request));
     }
 

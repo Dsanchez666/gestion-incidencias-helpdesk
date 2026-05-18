@@ -58,6 +58,9 @@ export class InboxComponent {
   notaObservacion = '';
   notaDetalle = '';
   notaAccion = '';
+  redirigirTecnico = '';
+  resolucionDescripcion = '';
+  rechazoMotivo = '';
   summaryLength = 50;
   error = '';
   loading = true;

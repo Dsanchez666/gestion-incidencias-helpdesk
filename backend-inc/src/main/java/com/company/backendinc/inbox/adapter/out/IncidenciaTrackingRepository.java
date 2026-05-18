@@ -1,6 +1,5 @@
 package com.company.backendinc.inbox.adapter.out;
 
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -24,8 +23,8 @@ public class IncidenciaTrackingRepository {
         ensureTable();
         return jdbcTemplate.query(
                 "SELECT incidencia_id FROM incidencia_tracking_token WHERE token = ? AND activo = true LIMIT 1",
-                rs -> rs.next() ? rs.getLong("incidencia_id") : null,
-                token);
+                ps -> ps.setString(1, token),
+                rs -> rs.next() ? rs.getLong("incidencia_id") : null);
     }
 
     private void ensureTable() {

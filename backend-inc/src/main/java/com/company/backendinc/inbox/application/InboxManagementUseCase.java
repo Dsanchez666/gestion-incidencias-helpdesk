@@ -8,11 +8,14 @@ import com.company.backendinc.inbox.InboxItem;
 import com.company.backendinc.inbox.InboxContext;
 import com.company.backendinc.inbox.IncidenciaInboxItem;
 import com.company.backendinc.inbox.IncidenciaNota;
+import com.company.backendinc.inbox.IncidenciaSeguimientoResponse;
 import com.company.backendinc.inbox.adapter.out.IncidenciaNotasRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementRepository;
 import com.company.backendinc.inbox.adapter.out.MailManagementState;
 import com.company.backendinc.inbox.adapter.out.IncidenciaInboxRepository;
+import com.company.backendinc.inbox.adapter.out.IncidenciaHistoricoRepository;
 import com.company.backendinc.inbox.adapter.out.TecnicoNotificationGateway;
+import com.company.backendinc.inbox.adapter.out.IncidenciaTrackingRepository;
 import com.company.backendinc.mailbox.application.port.out.MailboxConfigPort;
 import com.company.backendinc.mailbox.config.MailboxConfig;
 import com.company.backendinc.mailbox.config.MailboxEntry;
@@ -21,6 +24,8 @@ import com.company.backendinc.tecnico.adapter.out.TecnicoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,6 +47,8 @@ public class InboxManagementUseCase {
     private final TecnicoRepository tecnicoRepository;
     private final IncidenciaInboxRepository incidenciaInboxRepository;
     private final IncidenciaNotasRepository incidenciaNotasRepository;
+    private final IncidenciaHistoricoRepository incidenciaHistoricoRepository;
+    private final IncidenciaTrackingRepository incidenciaTrackingRepository;
     private final TecnicoNotificationGateway notificationGateway;
     private final CategoriaRepository categoriaRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -53,6 +60,8 @@ public class InboxManagementUseCase {
             TecnicoRepository tecnicoRepository,
             IncidenciaInboxRepository incidenciaInboxRepository,
             IncidenciaNotasRepository incidenciaNotasRepository,
+            IncidenciaHistoricoRepository incidenciaHistoricoRepository,
+            IncidenciaTrackingRepository incidenciaTrackingRepository,
             TecnicoNotificationGateway notificationGateway,
             CategoriaRepository categoriaRepository) {
         this.tokenStore = tokenStore;
@@ -61,6 +70,8 @@ public class InboxManagementUseCase {
         this.tecnicoRepository = tecnicoRepository;
         this.incidenciaInboxRepository = incidenciaInboxRepository;
         this.incidenciaNotasRepository = incidenciaNotasRepository;
+        this.incidenciaHistoricoRepository = incidenciaHistoricoRepository;
+        this.incidenciaTrackingRepository = incidenciaTrackingRepository;
         this.notificationGateway = notificationGateway;
         this.categoriaRepository = categoriaRepository;
     }
@@ -164,6 +175,7 @@ public class InboxManagementUseCase {
     }
 
     public void assignIncidencia(String messageId, String tecnicoNombre, String prioridad, int summaryLength) throws IOException {
+        ensureAdmin();
         Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
         if (tecnico == null) {
             throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
@@ -191,16 +203,32 @@ public class InboxManagementUseCase {
                 prioridadNormalizada,
                 false,
                 false,
-                false,
-                false,
                 null);
         incidenciaInboxRepository.upsert(incidencia);
+        IncidenciaInboxItem creada = incidenciaInboxRepository.findByMessageId(messageId);
+        if (creada != null) {
+            incidenciaHistoricoRepository.addEvento(creada.getId(), currentActor(),
+                    "Creada incidencia y asignada a " + tecnico.getNombre() + " con prioridad " + prioridadNormalizada);
+        }
         byte[] originalEml = fetchOriginalMessageEml(target.getMailbox(), target.getMessageId());
-        notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender(),
-                target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
+        notificationGateway.sendEmail(new TecnicoNotificationGateway.EmailRequest(
+                tecnico.getEmail(),
+                "Nueva incidencia asignada - " + target.getSubject(),
+                "Hola " + tecnico.getNombre() + ",\n\n"
+                        + "Se te ha asignado una incidencia nueva.\n\n"
+                        + "Datos:\n"
+                        + "- Buzon: " + target.getMailbox() + "\n"
+                        + "- Fecha recepcion: " + target.getReceivedDateTime() + "\n"
+                        + "- Remitente: " + target.getSender() + "\n"
+                        + "- Asunto: " + target.getSubject() + "\n"
+                        + "- Resumen: " + target.getSummary() + "\n\n"
+                        + "Se adjunta el correo original en formato .eml.\n",
+                "correo-original.eml",
+                originalEml));
     }
 
     public void assignIncidencias(List<String> messageIds, String tecnicoNombre, String prioridad, int summaryLength) throws IOException {
+        ensureAdmin();
         if (messageIds == null || messageIds.isEmpty()) {
             throw new IllegalArgumentException("No hay correos seleccionados");
         }
@@ -236,24 +264,28 @@ public class InboxManagementUseCase {
                     prioridadNormalizada,
                     false,
                     false,
-                    false,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
                     null);
             incidenciaInboxRepository.upsert(incidencia);
-            IncidenciaInboxItem creada = incidenciaInboxRepository.list().stream()
-                    .filter(i -> messageId.equals(i.getMessageId()))
-                    .findFirst().orElse(null);
+            IncidenciaInboxItem creada = incidenciaInboxRepository.findByMessageId(messageId);
             if (creada != null) {
                 incidenciaHistoricoRepository.addEvento(creada.getId(), currentActor(),
                         "Creada incidencia y asignada a " + tecnico.getNombre() + " con prioridad " + prioridadNormalizada);
             }
             byte[] originalEml = fetchOriginalMessageEml(target.getMailbox(), target.getMessageId());
-            notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), target.getSubject(), target.getSender(),
-                    target.getReceivedDateTime(), target.getSummary(), target.getMailbox(), originalEml);
+            notificationGateway.sendEmail(new TecnicoNotificationGateway.EmailRequest(
+                    tecnico.getEmail(),
+                    "Nueva incidencia asignada - " + target.getSubject(),
+                    "Hola " + tecnico.getNombre() + ",\n\n"
+                            + "Se te ha asignado una incidencia nueva.\n\n"
+                            + "Datos:\n"
+                            + "- Buzon: " + target.getMailbox() + "\n"
+                            + "- Fecha recepcion: " + target.getReceivedDateTime() + "\n"
+                            + "- Remitente: " + target.getSender() + "\n"
+                            + "- Asunto: " + target.getSubject() + "\n"
+                            + "- Resumen: " + target.getSummary() + "\n\n"
+                            + "Se adjunta el correo original en formato .eml.\n",
+                    "correo-original.eml",
+                    originalEml));
         }
     }
 
@@ -267,6 +299,7 @@ public class InboxManagementUseCase {
     }
 
     public void updateCategoria(Long incidenciaId, Long categoriaId) {
+        ensureAdmin();
         Categoria categoria = categoriaRepository.findById(categoriaId);
         if (categoria == null) {
             throw new IllegalArgumentException("Categoria no valida");
@@ -276,6 +309,7 @@ public class InboxManagementUseCase {
     }
 
     public void updateTecnicoIncidencia(Long incidenciaId, String tecnicoNombre) {
+        ensureAdmin();
         Tecnico tecnico = tecnicoRepository.findActivoByNombre(tecnicoNombre);
         if (tecnico == null) {
             throw new IllegalArgumentException("Tecnico no encontrado o inactivo");
@@ -294,16 +328,29 @@ public class InboxManagementUseCase {
         if (inc == null) throw new IllegalArgumentException("Incidencia no encontrada");
         incidenciaInboxRepository.updateTecnico(incidenciaId, tecnico.getNombre(), tecnico.getEmail());
         incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Redirigida incidencia a " + tecnico.getNombre());
-        notificationGateway.notifyAssignment(tecnico.getEmail(), tecnico.getNombre(), inc.getSubject(), inc.getSender(),
-                inc.getReceivedDateTime(), inc.getSummary(), inc.getMailbox(), null);
+        notificationGateway.sendEmail(new TecnicoNotificationGateway.EmailRequest(
+                tecnico.getEmail(),
+                "Incidencia redirigida - " + inc.getSubject(),
+                "Hola " + tecnico.getNombre() + ",\n\n"
+                        + "Se te ha redirigido una incidencia.\n\n"
+                        + "Datos:\n"
+                        + "- Buzon: " + inc.getMailbox() + "\n"
+                        + "- Fecha recepcion: " + inc.getReceivedDateTime() + "\n"
+                        + "- Remitente: " + inc.getSender() + "\n"
+                        + "- Asunto: " + inc.getSubject() + "\n"
+                        + "- Resumen: " + inc.getSummary() + "\n",
+                null,
+                null));
     }
 
     public void updateResuelta(Long incidenciaId, boolean resuelta) {
+        ensureNotConsulta();
         incidenciaInboxRepository.updateResuelta(incidenciaId, resuelta);
         incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), resuelta ? "Incidencia marcada como RESUELTA" : "Incidencia reabierta");
     }
 
     public void updatePrioridad(Long incidenciaId, String prioridad) {
+        ensureAdmin();
         String p = normalizePrioridad(prioridad);
         incidenciaInboxRepository.updatePrioridad(incidenciaId, p);
         incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Cambio de prioridad a " + p);
@@ -321,7 +368,16 @@ public class InboxManagementUseCase {
         incidenciaHistoricoRepository.addEvento(incidenciaId, actor, "Incidencia resuelta: " + descripcionResolucion);
         String token = incidenciaTrackingRepository.createToken(incidenciaId);
         String enlace = "http://localhost:4200/seguimiento/" + token;
-        notificationGateway.notifyResolutionToSender(inc.getSender(), inc.getSubject(), descripcionResolucion, enlace);
+        notificationGateway.sendEmail(new TecnicoNotificationGateway.EmailRequest(
+                inc.getSender(),
+                "Incidencia resuelta - " + inc.getSubject(),
+                "Tu incidencia ha sido marcada como resuelta.\n\n"
+                        + "Asunto: " + inc.getSubject() + "\n"
+                        + "Resolución: " + descripcionResolucion + "\n\n"
+                        + "Puedes consultar el detalle en:\n"
+                        + enlace + "\n",
+                null,
+                null));
     }
 
     public void rejectResolution(Long incidenciaId, String motivo) {
@@ -427,6 +483,14 @@ public class InboxManagementUseCase {
         return out;
     }
 
+    private Map<String, Long> toMapByKey(List<Map<String, Object>> rows, String mapKey, String valueKey) {
+        Map<String, Long> out = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            out.put(String.valueOf(row.get(mapKey)), ((Number) row.get(valueKey)).longValue());
+        }
+        return out;
+    }
+
     public List<IncidenciaInboxItem> listIncidencias() {
         return incidenciaInboxRepository.list();
     }
@@ -436,8 +500,33 @@ public class InboxManagementUseCase {
     }
 
     public void addNota(Long incidenciaId, String tecnico, String observacion, String detalle, String accionRealizada) {
+        ensureNotConsulta();
         incidenciaNotasRepository.addNota(incidenciaId, tecnico, observacion, detalle, accionRealizada);
         incidenciaInboxRepository.markEnProgreso(incidenciaId, true);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, currentActor(), "Añadida nota: " + observacion);
+    }
+
+    public IncidenciaSeguimientoResponse seguimientoByToken(String token) {
+        Long incidenciaId = incidenciaTrackingRepository.findIncidenciaIdByToken(token);
+        if (incidenciaId == null) {
+            throw new IllegalArgumentException("Token de seguimiento no válido");
+        }
+        IncidenciaInboxItem incidencia = incidenciaInboxRepository.findById(incidenciaId);
+        if (incidencia == null) {
+            throw new IllegalArgumentException("Incidencia no encontrada");
+        }
+        List<IncidenciaNota> historico = incidenciaHistoricoRepository.listByIncidencia(incidenciaId);
+        String tiempoResolucion = "N/A";
+        try {
+            OffsetDateTime assigned = OffsetDateTime.parse(incidencia.getReceivedDateTime());
+            Duration d = Duration.between(assigned, OffsetDateTime.now());
+            long days = d.toDays();
+            long hours = d.minusDays(days).toHours();
+            long minutes = d.minusDays(days).minusHours(hours).toMinutes();
+            tiempoResolucion = days + "d " + hours + "h " + minutes + "m";
+        } catch (Exception ignored) {
+        }
+        return new IncidenciaSeguimientoResponse(incidencia, historico, tiempoResolucion);
     }
 
     private byte[] fetchOriginalMessageEml(String mailbox, String messageId) {
@@ -509,5 +598,41 @@ public class InboxManagementUseCase {
                 false,
                 false,
                 "");
+    }
+
+    private String currentActor() {
+        String account = tokenStore.getAccountHint();
+        return (account == null || account.isBlank()) ? "sistema" : account;
+    }
+
+    private void ensureNotConsulta() {
+        String perfil = resolvePerfil();
+        if ("CONSULTA".equals(perfil)) {
+            throw new IllegalArgumentException("No autorizado para esta acción");
+        }
+    }
+
+    private void ensureAdmin() {
+        String perfil = resolvePerfil();
+        if (!"ADMIN".equals(perfil)) {
+            throw new IllegalArgumentException("No autorizado para esta acción");
+        }
+    }
+
+    private String resolvePerfil() {
+        String account = tokenStore.getAccountHint();
+        String usuario = (account == null || account.isBlank()) ? "" : account;
+        String usuarioSimple = usuario.contains("@") ? usuario.substring(0, usuario.indexOf('@')) : usuario;
+        Tecnico tecnico = tecnicoRepository.findActivoByUserHint(usuarioSimple);
+        boolean canReadMailbox = canReadMailbox();
+        String perfil;
+        if (tecnico != null) {
+            perfil = "RESOLUTOR";
+        } else if (canReadMailbox) {
+            perfil = "ADMIN";
+        } else {
+            perfil = "CONSULTA";
+        }
+        return perfil;
     }
 }

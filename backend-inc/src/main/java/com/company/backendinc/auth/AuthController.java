@@ -1,6 +1,7 @@
 package com.company.backendinc.auth;
 
 import com.company.backendinc.auth.application.AuthenticateUserUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         if (request == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
