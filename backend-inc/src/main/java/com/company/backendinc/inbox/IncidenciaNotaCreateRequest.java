@@ -1,9 +1,18 @@
 package com.company.backendinc.inbox;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class IncidenciaNotaCreateRequest {
+    @NotBlank
+    @Size(max = 150)
     private String tecnico;
+    @NotBlank
+    @Size(max = 500)
     private String observacion;
+    @Size(max = 5000)
     private String detalle;
+    @Size(max = 500)
     private String accionRealizada;
 
     public String getTecnico() { return tecnico; }

@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
-import jakarta.mail.Message;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.MimeMessage;
@@ -16,18 +15,22 @@ import java.util.Properties;
 @Component
 public class TecnicoNotificationGateway {
     private static final Logger log = LoggerFactory.getLogger(TecnicoNotificationGateway.class);
+    private static final String DEFAULT_FROM = "ServicioNotificacionETNA@enaire.es";
     private final MailboxConfigPort mailboxConfigPort;
 
     public TecnicoNotificationGateway(MailboxConfigPort mailboxConfigPort) {
         this.mailboxConfigPort = mailboxConfigPort;
     }
 
-    public void notifyAssignment(String tecnicoEmail, String tecnicoNombre, String subject, String sender,
-            String receivedDateTime, String summary, String mailbox, byte[] originalMessageEml) {
+    public void sendEmail(EmailRequest request) {
         try {
             SmtpConfig smtpConfig = mailboxConfigPort.load().getSmtp();
             if (smtpConfig == null) {
                 log.warn("Configuración SMTP no encontrada en Mailboxes_Conf.json");
+                return;
+            }
+            if (smtpConfig.getHost() == null || smtpConfig.getHost().isBlank() || smtpConfig.getPort() <= 0) {
+                log.warn("Configuración SMTP inválida: host='{}', port={}", smtpConfig.getHost(), smtpConfig.getPort());
                 return;
             }
 
@@ -36,28 +39,27 @@ public class TecnicoNotificationGateway {
 
             MimeMessage message = new MimeMessage(session);
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(smtpConfig.getFrom());
-            helper.setTo(tecnicoEmail);
-            helper.setSubject("Nueva incidencia asignada - " + subject);
-            helper.setText(
-                    "Hola " + tecnicoNombre + ",\n\n"
-                            + "Se te ha asignado una incidencia nueva.\n\n"
-                            + "Datos:\n"
-                            + "- Buzon: " + mailbox + "\n"
-                            + "- Fecha recepcion: " + receivedDateTime + "\n"
-                            + "- Remitente: " + sender + "\n"
-                            + "- Asunto: " + subject + "\n"
-                            + "- Resumen: " + summary + "\n\n"
-                            + "Se adjunta el correo original en formato .eml.\n");
-            if (originalMessageEml != null && originalMessageEml.length > 0) {
-                helper.addAttachment("correo-original.eml",
-                        new org.springframework.core.io.ByteArrayResource(originalMessageEml));
+            String from = (smtpConfig.getFrom() == null || smtpConfig.getFrom().isBlank()) ? DEFAULT_FROM : smtpConfig.getFrom();
+            log.info("SMTP send attempt -> from='{}', to='{}', subject='{}', host='{}', port={}",
+                    from, request.to(), request.subject(), smtpConfig.getHost(), smtpConfig.getPort());
+            helper.setFrom(from);
+            helper.setTo(request.to());
+            helper.setSubject(request.subject());
+            helper.setText(request.bodyText());
+            if (request.attachmentContent() != null && request.attachmentContent().length > 0
+                    && request.attachmentName() != null && !request.attachmentName().isBlank()) {
+                helper.addAttachment(request.attachmentName(),
+                        new org.springframework.core.io.ByteArrayResource(request.attachmentContent()));
             }
 
-            sendMessage(message, smtpConfig);
-            log.info("Email de asignacion enviado a {} exitosamente", tecnicoEmail);
+            sendMessage(message);
+            log.info("Email '{}' enviado a {} exitosamente", request.subject(), request.to());
         } catch (Exception ex) {
-            log.warn("No se pudo enviar email de asignacion a {}: {}", tecnicoEmail, ex.getMessage());
+            Throwable root = rootCause(ex);
+            log.warn("No se pudo enviar email a {}: {} (causa: {})",
+                    request.to(),
+                    ex.getMessage(),
+                    root == null ? "desconocida" : root.getMessage());
         }
     }
 
@@ -65,28 +67,35 @@ public class TecnicoNotificationGateway {
         Properties props = new Properties();
         props.put("mail.smtp.host", config.getHost());
         props.put("mail.smtp.port", String.valueOf(config.getPort()));
-        props.put("mail.smtp.auth", String.valueOf(config.isAuth()));
-        props.put("mail.smtp.starttls.enable", String.valueOf(config.isStarttls()));
-        props.put("mail.smtp.starttls.required", String.valueOf(config.isStarttls()));
-        props.put("mail.smtp.socketFactory.port", String.valueOf(config.getPort()));
-        if (config.isStarttls()) {
-            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-        }
+        props.put("mail.smtp.auth", "false");
+        props.put("mail.smtp.starttls.enable", "false");
+        props.put("mail.smtp.connectiontimeout", "10000");
+        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.smtp.writetimeout", "10000");
         return props;
     }
 
-    private void sendMessage(MimeMessage message, SmtpConfig config) throws IOException {
+    private void sendMessage(MimeMessage message) throws IOException {
         try {
-            if (config.isAuth() && config.getUsername() != null && !config.getUsername().isBlank()) {
-                Transport transport = message.getSession().getTransport("smtp");
-                transport.connect(config.getHost(), config.getPort(), config.getUsername(), config.getPassword());
-                transport.sendMessage(message, message.getAllRecipients());
-                transport.close();
-            } else {
-                Transport.send(message);
-            }
+            Transport.send(message);
         } catch (Exception ex) {
             throw new IOException("Error enviando mensaje SMTP", ex);
         }
+    }
+
+    public record EmailRequest(
+            String to,
+            String subject,
+            String bodyText,
+            String attachmentName,
+            byte[] attachmentContent) {
+    }
+
+    private Throwable rootCause(Throwable ex) {
+        Throwable current = ex;
+        while (current != null && current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 }

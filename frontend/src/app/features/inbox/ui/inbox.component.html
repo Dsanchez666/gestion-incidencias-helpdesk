@@ -117,7 +117,13 @@
         <div class="inc-elapsed">{{ elapsedFromReceived(inc) }}</div>
         <div class="inc-meta">
           <span>{{ inc.sender }}</span>
-          <span>{{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }} · {{ inc.prioridad || 'NORMAL' }} ·</span>
+          <span>
+            {{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }} ·
+            <span class="priority-pill" [ngClass]="'priority-' + (inc.prioridad || 'NORMAL').toLowerCase()">
+              {{ inc.prioridad || 'NORMAL' }}
+            </span>
+            ·
+          </span>
         </div>
         <div class="inc-controls">
           <label>Técnico

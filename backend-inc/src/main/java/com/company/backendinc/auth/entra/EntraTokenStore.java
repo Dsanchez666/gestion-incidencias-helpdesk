@@ -12,14 +12,12 @@ import org.springframework.stereotype.Component;
 public class EntraTokenStore implements EntraSessionStorePort {
     private String accessToken;
     private Instant expiresAt;
-    private String refreshToken;
     private String accountHint;
 
     @Override
     public synchronized void setToken(String accessToken, Instant expiresAt, String refreshToken, String accountHint) {
         this.accessToken = accessToken;
         this.expiresAt = expiresAt;
-        this.refreshToken = refreshToken;
         this.accountHint = (accountHint == null || accountHint.isBlank()) ? extractAccountHint(accessToken) : accountHint;
     }
 
@@ -43,7 +41,6 @@ public class EntraTokenStore implements EntraSessionStorePort {
     public synchronized void clear() {
         this.accessToken = null;
         this.expiresAt = null;
-        this.refreshToken = null;
         this.accountHint = null;
     }
 

@@ -34,7 +34,7 @@ public class IncidenciaInboxRepository {
     public List<IncidenciaInboxItem> list() {
         ensureTable();
         String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
-                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.resuelta, i.en_progreso, "
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
                 + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
                 + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id ORDER BY assigned_at DESC";
         return jdbcTemplate.query(sql, (rs, rowNum) -> new IncidenciaInboxItem(
@@ -78,6 +78,82 @@ public class IncidenciaInboxRepository {
     public void markEnProgreso(Long incidenciaId, boolean enProgreso) {
         ensureTable();
         jdbcTemplate.update("UPDATE incidencia_inbox SET en_progreso = ? WHERE id = ?", enProgreso, incidenciaId);
+    }
+
+    public IncidenciaInboxItem findById(Long incidenciaId) {
+        ensureTable();
+        String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
+                + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
+                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id WHERE i.id = ? LIMIT 1";
+        return jdbcTemplate.query(sql, ps -> ps.setLong(1, incidenciaId), rs -> rs.next()
+                ? new IncidenciaInboxItem(
+                        rs.getLong("id"),
+                        rs.getString("message_id"),
+                        rs.getString("mailbox"),
+                        rs.getString("received_date_time"),
+                        rs.getString("sender"),
+                        rs.getString("subject"),
+                        rs.getString("summary"),
+                        rs.getString("tecnico_asignado"),
+                        rs.getString("tecnico_email"),
+                        rs.getObject("categoria_id", Long.class),
+                        rs.getString("categoria_abreviatura"),
+                        rs.getString("categoria_color_hex"),
+                        rs.getString("prioridad"),
+                        rs.getBoolean("resuelta"),
+                        rs.getBoolean("en_progreso"),
+                        rs.getString("assigned_at"))
+                : null);
+    }
+
+    public IncidenciaInboxItem findByMessageId(String messageId) {
+        ensureTable();
+        String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
+                + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
+                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id WHERE i.message_id = ? LIMIT 1";
+        return jdbcTemplate.query(sql, ps -> ps.setString(1, messageId), rs -> rs.next()
+                ? new IncidenciaInboxItem(
+                        rs.getLong("id"),
+                        rs.getString("message_id"),
+                        rs.getString("mailbox"),
+                        rs.getString("received_date_time"),
+                        rs.getString("sender"),
+                        rs.getString("subject"),
+                        rs.getString("summary"),
+                        rs.getString("tecnico_asignado"),
+                        rs.getString("tecnico_email"),
+                        rs.getObject("categoria_id", Long.class),
+                        rs.getString("categoria_abreviatura"),
+                        rs.getString("categoria_color_hex"),
+                        rs.getString("prioridad"),
+                        rs.getBoolean("resuelta"),
+                        rs.getBoolean("en_progreso"),
+                        rs.getString("assigned_at"))
+                : null);
+    }
+
+    public void updatePrioridad(Long incidenciaId, String prioridad) {
+        ensureTable();
+        jdbcTemplate.update("UPDATE incidencia_inbox SET prioridad = ? WHERE id = ?", prioridad, incidenciaId);
+    }
+
+    public void resolveWithDescription(Long incidenciaId, String descripcionResolucion, String actor) {
+        ensureTable();
+        jdbcTemplate.update(
+                "UPDATE incidencia_inbox SET resuelta = true, en_progreso = false, resolved_at = CURRENT_TIMESTAMP, "
+                        + "resolucion_texto = ?, resuelta_por = ?, rechazada = false, rechazo_motivo = NULL, rechazada_por = NULL, rechazada_at = NULL "
+                        + "WHERE id = ?",
+                descripcionResolucion, actor, incidenciaId);
+    }
+
+    public void rejectResolution(Long incidenciaId, String motivo, String actor) {
+        ensureTable();
+        jdbcTemplate.update(
+                "UPDATE incidencia_inbox SET rechazada = true, rechazo_motivo = ?, rechazada_por = ?, rechazada_at = CURRENT_TIMESTAMP, "
+                        + "resuelta = false, resolved_at = NULL WHERE id = ?",
+                motivo, actor, incidenciaId);
     }
 
     public List<Map<String, Object>> categoryStatsByAssignedMonth(YearMonth month) {

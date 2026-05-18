@@ -1,6 +1,7 @@
 package com.company.backendinc.inbox;
 
 import com.company.backendinc.inbox.application.InboxManagementUseCase;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -61,7 +62,7 @@ public class InboxManagementController {
     @PostMapping("/{messageId}/asignar-incidencia")
     public ResponseEntity<Void> assignIncidencia(@PathVariable String messageId,
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
-            @RequestBody AsignarIncidenciaRequest request) throws IOException {
+            @Valid @RequestBody AsignarIncidenciaRequest request) throws IOException {
         try {
             useCase.assignIncidencia(messageId, request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
@@ -73,7 +74,7 @@ public class InboxManagementController {
     @PostMapping("/asignar-incidencias")
     public ResponseEntity<Void> assignIncidencias(
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
-            @RequestBody AsignarIncidenciasRequest request) throws IOException {
+            @Valid @RequestBody AsignarIncidenciasRequest request) throws IOException {
         try {
             useCase.assignIncidencias(request.getMessageIds(), request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
@@ -163,7 +164,7 @@ public class InboxManagementController {
     }
 
     @PostMapping("/incidencias/{incidenciaId}/notas")
-    public ResponseEntity<Void> addNota(@PathVariable Long incidenciaId, @RequestBody IncidenciaNotaCreateRequest request) {
+    public ResponseEntity<Void> addNota(@PathVariable Long incidenciaId, @Valid @RequestBody IncidenciaNotaCreateRequest request) {
         useCase.addNota(incidenciaId, request.getTecnico(), request.getObservacion(), request.getDetalle(), request.getAccionRealizada());
         return ResponseEntity.noContent().build();
     }

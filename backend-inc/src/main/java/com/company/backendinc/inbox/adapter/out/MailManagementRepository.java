@@ -24,7 +24,11 @@ public class MailManagementRepository {
         String sql = "SELECT message_id, incidencia_generada, asignada, tecnico_asignado FROM mail_management WHERE message_id IN ("
                 + placeholders + ")";
 
-        jdbcTemplate.query(sql, messageIds.toArray(), rs -> {
+        jdbcTemplate.query(sql, ps -> {
+            for (int i = 0; i < messageIds.size(); i++) {
+                ps.setString(i + 1, messageIds.get(i));
+            }
+        }, rs -> {
             String messageId = rs.getString("message_id");
             result.put(messageId,
                     new MailManagementState(

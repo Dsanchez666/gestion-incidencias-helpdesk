@@ -22,7 +22,7 @@ public class IncidenciaInboxItem {
 
     public IncidenciaInboxItem(Long id, String messageId, String mailbox, String receivedDateTime, String sender, String subject,
             String summary, String tecnicoAsignado, String tecnicoEmail, Long categoriaId, String categoriaAbreviatura, String categoriaColorHex,
-            boolean resuelta, boolean enProgreso, String assignedAt) {
+            String prioridad, boolean resuelta, boolean enProgreso, String assignedAt) {
         this.id = id;
         this.messageId = messageId;
         this.mailbox = mailbox;
