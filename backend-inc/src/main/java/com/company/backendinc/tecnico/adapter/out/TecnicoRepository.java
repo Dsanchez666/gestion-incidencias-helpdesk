@@ -6,11 +6,14 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class TecnicoRepository {
+    private static final String COLUMN_EMAIL = "email";
     private final JdbcTemplate jdbcTemplate;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public TecnicoRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -22,7 +25,7 @@ public class TecnicoRepository {
                 : "SELECT id, nombre, '' AS email FROM tecnico WHERE activo = true ORDER BY nombre ASC";
         return jdbcTemplate.query(
                 sql,
-                (rs, rowNum) -> new Tecnico(rs.getLong("id"), rs.getString("nombre"), rs.getString("email")));
+                (rs, rowNum) -> new Tecnico(rs.getLong("id"), rs.getString("nombre"), rs.getString(COLUMN_EMAIL)));
     }
 
     public Tecnico findActivoByNombre(String nombre) {
@@ -50,8 +53,9 @@ public class TecnicoRepository {
                 .orElse(null);
     }
 
-    public void create(String nombre, String email) {
-        jdbcTemplate.update("INSERT INTO tecnico (nombre, email, activo) VALUES (?, ?, true)", nombre, email);
+    public void create(String nombre, String email, String password) {
+        String hash = encoder.encode(password == null ? "" : password);
+        jdbcTemplate.update("INSERT INTO tecnico (nombre, email, password_hash, activo) VALUES (?, ?, ?, true)", nombre, email, hash);
     }
 
     private boolean hasEmailColumn() {

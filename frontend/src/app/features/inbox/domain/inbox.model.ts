@@ -16,13 +16,19 @@ export interface Tecnico {
   email: string;
 }
 
+export interface Prioridad {
+  id: number;
+  nombre: string;
+  colorHex: string;
+}
+
 export interface InboxContext {
   appName: string;
   mailboxNombre: string;
   mailboxCorreo: string;
   usuarioConectado: string;
   permisos: string;
-  perfil: 'ADMIN' | 'CONSULTA' | 'RESOLUTOR' | string;
+  perfil: 'ADMIN' | 'CONSULTA' | 'RESOLUTOR';
   puedeVerCorreos: boolean;
 }
 
@@ -39,7 +45,7 @@ export interface IncidenciaInboxItem {
   categoriaId?: number | null;
   categoriaAbreviatura?: string | null;
   categoriaColorHex?: string | null;
-  prioridad?: 'URGENTE' | 'ALTA' | 'NORMAL' | 'BAJA' | string;
+  prioridad?: 'URGENTE' | 'ALTA' | 'NORMAL' | 'BAJA';
   resuelta: boolean;
   enProgreso: boolean;
   assignedAt: string;
@@ -95,5 +101,13 @@ export interface IncidenciaNota {
   observacion: string;
   detalle: string;
   accionRealizada: string;
+  createdAt: string;
+}
+
+export interface HistoricoIncidencia {
+  id: number;
+  incidenciaId: number;
+  actor: string;
+  descripcion: string;
   createdAt: string;
 }

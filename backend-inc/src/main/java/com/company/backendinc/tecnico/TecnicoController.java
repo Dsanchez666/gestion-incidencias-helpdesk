@@ -3,6 +3,7 @@ package com.company.backendinc.tecnico;
 import com.company.backendinc.tecnico.application.ListTecnicosActivosUseCase;
 import com.company.backendinc.tecnico.adapter.out.TecnicoRepository;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +28,18 @@ public class TecnicoController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> create(@RequestBody TecnicoCreateRequest request) {
-        tecnicoRepository.create(request.getNombre(), request.getEmail());
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> create(@RequestBody TecnicoCreateRequest request) {
+        try {
+            if (request.getNombre() == null || request.getNombre().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("El nombre del técnico es requerido");
+            }
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("El email del técnico es requerido");
+            }
+            tecnicoRepository.create(request.getNombre(), request.getEmail(), request.getPassword());
+            return ResponseEntity.noContent().build();
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Error al crear técnico: " + ex.getMessage());
+        }
     }
 }
