@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
+import { DatePipe, NgClass, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { InboxApiService } from '../infrastructure/inbox-api.service';
@@ -10,6 +10,7 @@ import {
   IncidenciaInboxItem,
   IncidenciaNota,
   IncidenciasStatsResponse,
+  Prioridad,
   Tecnico
 } from '../domain/inbox.model';
 import { MailboxUiConfigService } from '../../../core/config/mailbox-ui-config.service';
@@ -29,7 +30,7 @@ type IncSortKey =
 @Component({
   selector: 'app-inbox',
   standalone: true,
-  imports: [NgIf, NgFor, NgStyle, FormsModule, DatePipe],
+  imports: [NgIf, NgFor, NgClass, NgStyle, FormsModule, DatePipe],
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.scss'
 })
@@ -49,11 +50,13 @@ export class InboxComponent {
   incidencias: IncidenciaInboxItem[] = [];
   tecnicos: Tecnico[] = [];
   categorias: Categoria[] = [];
+  prioridades: Prioridad[] = [];
   stats: IncidenciasStatsResponse | null = null;
   showStatsModal = false;
   showTreatmentModal = false;
   selectedIncidencia: IncidenciaInboxItem | null = null;
   notasIncidencia: IncidenciaNota[] = [];
+  historicoIncidencia: any[] = [];
   notaTecnico = '';
   notaObservacion = '';
   notaDetalle = '';
@@ -72,6 +75,8 @@ export class InboxComponent {
   selectedPrioridadByIncidenciaId: Record<number, string> = {};
   savingIncidencias = false;
   incidenciasTextFilter = '';
+  tecnicoScopeFilter = '';
+  showResolvedIncidencias = true;
   showAdminModal = false;
   adminTab: 'tecnico' | 'categoria' = 'tecnico';
   newTecnicoNombre = '';
@@ -97,10 +102,10 @@ export class InboxComponent {
   filters = { generic: '', sender: '', subject: '', summary: '', tecnico: '' };
 
   constructor(
-    private inboxApi: InboxApiService,
-    private config: MailboxUiConfigService,
-    private logoutUseCase: LogoutUseCase,
-    private router: Router
+    private readonly inboxApi: InboxApiService,
+    private readonly config: MailboxUiConfigService,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly router: Router
   ) {
     this.config.getPreviewLength().subscribe((length) => {
       this.summaryLength = length;
@@ -109,6 +114,7 @@ export class InboxComponent {
     this.loadContext();
     this.loadIncidencias();
     this.loadCategorias();
+    this.loadPrioridades();
     this.loadTecnicos();
   }
 
@@ -125,6 +131,7 @@ export class InboxComponent {
         this.error = 'No se pudo cargar la bandeja de entrada';
         this.items = [];
         this.loading = false;
+        this.handleFatalBackendError();
       }
     });
   }
@@ -136,6 +143,8 @@ export class InboxComponent {
 
   get sortedIncidencias(): IncidenciaInboxItem[] {
     const filtered = this.incidencias.filter((i) => {
+      if (this.tecnicoScopeFilter && (i.tecnicoAsignado ?? '').toLowerCase() !== this.tecnicoScopeFilter.toLowerCase()) return false;
+      if (!this.showResolvedIncidencias && i.resuelta) return false;
       if (!this.incidenciasTextFilter) return true;
       const t = this.incidenciasTextFilter.toLowerCase();
       return `${i.subject} ${i.sender} ${i.tecnicoAsignado} ${i.categoriaAbreviatura ?? ''} ${i.prioridad ?? 'NORMAL'} ${i.receivedDateTime ?? ''}`
@@ -143,10 +152,27 @@ export class InboxComponent {
         .includes(t);
     });
     return [...filtered].sort((a, b) => {
-      const pa = this.priorityRank(a.prioridad);
-      const pb = this.priorityRank(b.prioridad);
-      if (pa !== pb) return pa - pb;
-      return this.toMillis(a.assignedAt) - this.toMillis(b.assignedAt);
+      // Grupo 1: Sin resolver (prioritarias)
+      // Grupo 2: En progreso
+      // Grupo 3: Resueltas
+      const aResuelto = a.resuelta ? 2 : 0;
+      const bResuelto = b.resuelta ? 2 : 0;
+      const aEnProgreso = a.enProgreso && !a.resuelta ? 1 : 0;
+      const bEnProgreso = b.enProgreso && !b.resuelta ? 1 : 0;
+      
+      const aGrupo = aResuelto || aEnProgreso; // 0 = sin resolver, 1 = en progreso, 2 = resuelta
+      const bGrupo = bResuelto || bEnProgreso;
+      
+      if (aGrupo !== bGrupo) return aGrupo - bGrupo;
+      
+      // Dentro del mismo grupo, ordenar por fecha
+      if (aGrupo === 2) {
+        // Resueltas: ordenar por fecha de recepción más reciente primero (descendente)
+        return this.toMillis(b.receivedDateTime) - this.toMillis(a.receivedDateTime);
+      } else {
+        // Sin resolver o en progreso: ordenar por fecha de asignación más antigua primero (ascendente)
+        return this.toMillis(a.assignedAt) - this.toMillis(b.assignedAt);
+      }
     });
   }
 
@@ -167,10 +193,17 @@ export class InboxComponent {
     return perfil === 'TECNICO' || perfil === 'RESOLUTOR';
   }
   get isReadOnlyIncidenciasProfile(): boolean {
-    return (this.context.perfil ?? '').toUpperCase() !== 'ADMIN';
+    if ((this.context.perfil ?? '').toUpperCase() === 'ADMIN') return false;
+    return true;
   }
   get isConsultaProfile(): boolean {
     return (this.context.perfil ?? '').toUpperCase() === 'CONSULTA';
+  }
+
+  canManageIncidencia(inc: IncidenciaInboxItem): boolean {
+    if ((this.context.perfil ?? '').toUpperCase() === 'ADMIN') return true;
+    if (!this.isTecnicoProfile) return false;
+    return !!this.tecnicoScopeFilter && (inc.tecnicoAsignado ?? '').toLowerCase() === this.tecnicoScopeFilter.toLowerCase();
   }
 
   togglePendingSort(key: PendingSortKey): void {
@@ -282,7 +315,9 @@ export class InboxComponent {
     prioridadChanges.forEach((p) => this.inboxApi.updatePrioridad(p.id, p.nuevo).subscribe({ next: done, error: done }));
   }
 
-  categorizarAutomatico(): void {}
+  categorizarAutomatico(): void {
+    // TODO: Implement automatic categorization
+  }
 
   openStats(): void {
     this.inboxApi.getStats().subscribe({
@@ -299,7 +334,7 @@ export class InboxComponent {
   categoryStyleClass(inc: IncidenciaInboxItem): string {
     const token = (inc.categoriaAbreviatura ?? 'NA').toUpperCase();
     let acc = 0;
-    for (let i = 0; i < token.length; i++) acc += token.charCodeAt(i);
+    for (let i = 0; i < token.length; i++) acc += token.codePointAt(i) || 0;
     return `cat-style-${(acc % 4) + 1}`;
   }
 
@@ -309,12 +344,20 @@ export class InboxComponent {
     };
   }
 
+  getPrioridadColorHex(prioridad: string | undefined): string {
+    const p = this.prioridades.find((pr) => pr.nombre === (prioridad ?? 'NORMAL'));
+    return p?.colorHex ?? '#dbeafe';
+  }
+
   openTreatmentModal(inc: IncidenciaInboxItem): void {
     this.selectedIncidencia = inc;
     this.notaTecnico = this.selectedTecnicoByIncidenciaId[inc.id] ?? inc.tecnicoAsignado;
     this.notaObservacion = '';
     this.notaDetalle = '';
     this.notaAccion = '';
+    this.historicoIncidencia = [];
+    
+    // Cargar notas e historial
     this.inboxApi.listNotas(inc.id).subscribe({
       next: (notas) => {
         this.notasIncidencia = notas;
@@ -323,6 +366,15 @@ export class InboxComponent {
       error: () => {
         this.notasIncidencia = [];
         this.showTreatmentModal = true;
+      }
+    });
+
+    this.inboxApi.listHistorico(inc.id).subscribe({
+      next: (historico) => {
+        this.historicoIncidencia = historico;
+      },
+      error: () => {
+        this.historicoIncidencia = [];
       }
     });
   }
@@ -373,7 +425,11 @@ export class InboxComponent {
       next: () => {
         this.newTecnicoNombre = '';
         this.newTecnicoEmail = '';
+        this.setAssignFeedback('Técnico creado correctamente.', 'success');
         this.loadTecnicos();
+      },
+      error: (err) => {
+        this.setAssignFeedback(`Error al crear técnico: ${this.extractErrorMessage(err)}`, 'error');
       }
     });
   }
@@ -385,7 +441,11 @@ export class InboxComponent {
         this.newCategoriaNombre = '';
         this.newCategoriaAbreviatura = '';
         this.newCategoriaColorHex = '#f3f4f6';
+        this.setAssignFeedback('Categoría creada correctamente.', 'success');
         this.loadCategorias();
+      },
+      error: (err) => {
+        this.setAssignFeedback(`Error al crear categoría: ${this.extractErrorMessage(err)}`, 'error');
       }
     });
   }
@@ -491,8 +551,13 @@ export class InboxComponent {
     this.inboxApi.context().subscribe({
       next: (context) => {
         this.context = context;
+        if (this.isTecnicoProfile && !this.tecnicoScopeFilter) {
+          const u = (this.context.usuarioConectado ?? '').trim();
+          this.tecnicoScopeFilter = u.includes('@') ? u.substring(0, u.indexOf('@')) : u;
+        }
         if (this.context.puedeVerCorreos) this.refresh();
-      }
+      },
+      error: (err) => this.handleFatalBackendError(err)
     });
   }
 
@@ -507,15 +572,39 @@ export class InboxComponent {
           this.selectedPrioridadByIncidenciaId[it.id] = (it.prioridad ?? 'NORMAL').toUpperCase();
         }
       },
-      error: () => (this.incidencias = [])
+      error: (err) => {
+        this.incidencias = [];
+        this.handleFatalBackendError(err);
+      }
     });
   }
 
   private loadTecnicos(): void {
-    this.inboxApi.listTecnicos().subscribe({ next: (tecnicos) => (this.tecnicos = tecnicos), error: () => (this.tecnicos = []) });
+    this.inboxApi.listTecnicos().subscribe({
+      next: (tecnicos) => (this.tecnicos = tecnicos),
+      error: (err) => {
+        this.tecnicos = [];
+        this.handleFatalBackendError(err);
+      }
+    });
   }
   private loadCategorias(): void {
-    this.inboxApi.listCategorias().subscribe({ next: (categorias) => (this.categorias = categorias), error: () => (this.categorias = []) });
+    this.inboxApi.listCategorias().subscribe({
+      next: (categorias) => (this.categorias = categorias),
+      error: (err) => {
+        this.categorias = [];
+        this.handleFatalBackendError(err);
+      }
+    });
+  }
+  private loadPrioridades(): void {
+    this.inboxApi.listPrioridades().subscribe({
+      next: (prioridades) => (this.prioridades = prioridades),
+      error: (err) => {
+        this.prioridades = [];
+        this.handleFatalBackendError(err);
+      }
+    });
   }
 
   logout(): void {
@@ -547,6 +636,13 @@ export class InboxComponent {
   private setAssignFeedback(message: string, type: 'success' | 'error' | 'info' | ''): void {
     this.assignFeedback = message;
     this.assignFeedbackType = type;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (type !== '') {
+      setTimeout(() => {
+        this.assignFeedback = '';
+        this.assignFeedbackType = '';
+      }, 4000);
+    }
   }
 
   private extractErrorMessage(err: unknown): string {
@@ -556,7 +652,10 @@ export class InboxComponent {
     if (typeof errorObj.error === 'string' && errorObj.error.trim()) return errorObj.error;
     if (typeof errorObj.error === 'object' && errorObj.error?.message) return errorObj.error.message;
     if (errorObj.message) return errorObj.message;
-    if (errorObj.status) return `${errorObj.status}${errorObj.statusText ? ` ${errorObj.statusText}` : ''}`;
+    if (errorObj.status) {
+      const statusText = errorObj.statusText ? ` ${errorObj.statusText}` : '';
+      return `${errorObj.status}${statusText}`;
+    }
     return fallback;
   }
 
@@ -572,5 +671,22 @@ export class InboxComponent {
   private toMillis(value: string | undefined): number {
     const ms = Date.parse(value ?? '');
     return Number.isNaN(ms) ? Number.MAX_SAFE_INTEGER : ms;
+  }
+
+  private handleFatalBackendError(err?: unknown): void {
+    const errorObj = err as { error?: { error?: string; message?: string } } | undefined;
+    if (errorObj?.error?.error === 'db_env_missing') {
+      globalThis.alert(
+        'No se puede conectar con la base de datos.\n\n' +
+          'Debes definir estas variables de entorno antes de arrancar el backend:\n' +
+          '- DB_URL=jdbc:mysql://localhost:3306/GestionIncidencias?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC\n' +
+          '- DB_USER=GestorIncidencias\n' +
+          '- DB_PASS=********'
+      );
+      return;
+    }
+    if (!err) {
+      return;
+    }
   }
 }

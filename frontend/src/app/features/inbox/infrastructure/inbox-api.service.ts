@@ -8,6 +8,7 @@ import {
   IncidenciaInboxItem,
   IncidenciaNota,
   IncidenciasStatsResponse,
+  Prioridad,
   Tecnico
 } from '../domain/inbox.model';
 
@@ -16,8 +17,9 @@ export class InboxApiService {
   private readonly inboxUrl = 'http://localhost:4000/api/inbox/gestion';
   private readonly tecnicosUrl = 'http://localhost:4000/api/tecnicos';
   private readonly categoriasUrl = 'http://localhost:4000/api/categorias';
+  private readonly prioridadesUrl = 'http://localhost:4000/api/prioridades';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   list(summaryLength: number): Observable<InboxItem[]> {
     return this.http.get<InboxItem[]>(`${this.inboxUrl}?summaryLength=${summaryLength}`);
@@ -67,6 +69,10 @@ export class InboxApiService {
     return this.http.get<Categoria[]>(this.categoriasUrl);
   }
 
+  listPrioridades(): Observable<Prioridad[]> {
+    return this.http.get<Prioridad[]>(this.prioridadesUrl);
+  }
+
   createCategoria(nombre: string, abreviatura: string, colorHex: string): Observable<void> {
     return this.http.post<void>(this.categoriasUrl, { nombre, abreviatura, colorHex });
   }
@@ -114,6 +120,10 @@ export class InboxApiService {
 
   listNotas(incidenciaId: number): Observable<IncidenciaNota[]> {
     return this.http.get<IncidenciaNota[]>(`${this.inboxUrl}/incidencias/${incidenciaId}/notas`);
+  }
+
+  listHistorico(incidenciaId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.inboxUrl}/incidencias/${incidenciaId}/historico`);
   }
 
   addNota(

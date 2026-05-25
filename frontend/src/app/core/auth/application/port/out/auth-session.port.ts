@@ -5,6 +5,8 @@ import { InjectionToken } from '@angular/core';
  */
 export interface AuthSessionPort {
   login(username: string, password: string): import('rxjs').Observable<void>;
+  recoverPassword(userOrEmail: string): import('rxjs').Observable<void>;
+  resetPassword(token: string, newPassword: string): import('rxjs').Observable<void>;
   logout(): void;
   isAuthenticated(): boolean;
   setToken(token: string): void;

@@ -7,6 +7,7 @@ import { AppComponent } from './app/app.component';
 import { IncidenciaFormComponent } from './app/features/incidencia/ui/incidencia-form.component';
 import { LoginComponent } from './app/features/auth/ui/login.component';
 import { StartupComponent } from './app/features/auth/ui/startup.component';
+import { ResetPasswordComponent } from './app/features/auth/ui/reset-password.component';
 import { MailboxListComponent } from './app/features/mailbox/ui/mailbox-list.component';
 import { SplashComponent } from './app/features/splash/ui/splash.component';
 import { InboxComponent } from './app/features/inbox/ui/inbox.component';
@@ -27,6 +28,7 @@ const routes: Routes = [
   { path: '', component: SplashComponent },
   { path: 'startup', component: StartupComponent },
   { path: 'login', component: LoginComponent },
+  { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'buzones', component: MailboxListComponent, canActivate: [authGuard] },
   { path: 'inbox', component: InboxComponent, canActivate: [authGuard] },
   { path: 'incidencias', component: IncidenciaFormComponent, canActivate: [authGuard] },

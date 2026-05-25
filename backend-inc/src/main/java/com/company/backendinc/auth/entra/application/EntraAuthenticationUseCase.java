@@ -226,10 +226,10 @@ public class EntraAuthenticationUseCase {
                   <div class="box">
                     <h2 class="%s">%s</h2>
                     <p>%s</p>
-                    <p>Redirección automática en 1 segundo: <a href="http://localhost:3000/startup">Abrir app</a></p>
+                    <p>Redirección automática: <a href="http://localhost:3000/startup">Abrir app</a></p>
                   </div>
                   <script>
-                    setTimeout(function () { window.location.href = "http://localhost:3000/startup"; }, 1000);
+                    window.location.href = "http://localhost:3000/startup";
                   </script>
                 </body>
                 </html>

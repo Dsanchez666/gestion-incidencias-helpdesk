@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { LoginUseCase } from '../../../core/auth/application/login.usecase';
+import { RecoverPasswordUseCase } from '../../../core/auth/application/recover-password.usecase';
 
 @Component({
   selector: 'app-login',
@@ -16,9 +17,12 @@ export class LoginComponent {
   password = '';
   error = '';
   isLoading = false;
+  recoverUserOrEmail = '';
+  recoverMessage = '';
 
   constructor(
     private loginUseCase: LoginUseCase,
+    private recoverPasswordUseCase: RecoverPasswordUseCase,
     private router: Router
   ) {}
 
@@ -35,6 +39,19 @@ export class LoginComponent {
         this.isLoading = false;
         this.error = 'Usuario no existe o la clave es incorrecta';
       }
+    });
+  }
+
+  loginConEntra(): void {
+    this.router.navigateByUrl('/startup');
+  }
+
+  recoverPassword(): void {
+    this.error = '';
+    this.recoverMessage = '';
+    this.recoverPasswordUseCase.execute(this.recoverUserOrEmail).subscribe({
+      next: () => (this.recoverMessage = 'Si el usuario existe, se ha enviado un enlace de recuperación.'),
+      error: () => (this.error = 'No se pudo iniciar recuperación de contraseña')
     });
   }
 }

@@ -12,6 +12,8 @@ interface LoginResponse {
 export class AuthService implements AuthSessionPort {
   private readonly tokenKey = 'helpdesk_basic_auth_token';
   private readonly apiUrl = 'http://localhost:4000/api/auth/login';
+  private readonly recoverUrl = 'http://localhost:4000/api/auth/password/recover';
+  private readonly resetUrl = 'http://localhost:4000/api/auth/password/reset';
 
   constructor(private http: HttpClient) {}
 
@@ -23,6 +25,14 @@ export class AuthService implements AuthSessionPort {
         tap(() => sessionStorage.setItem(this.tokenKey, token)),
         map(() => undefined)
       );
+  }
+
+  recoverPassword(userOrEmail: string): Observable<void> {
+    return this.http.post<void>(this.recoverUrl, { userOrEmail });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(this.resetUrl, { token, newPassword });
   }
 
   logout(): void {

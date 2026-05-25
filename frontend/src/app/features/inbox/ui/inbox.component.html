@@ -7,7 +7,6 @@
     <div class="user-box">
       <p>Usuario: {{ context.usuarioConectado }}</p>
       <p>Perfil: <strong>{{ context.perfil }}</strong></p>
-      <p>Permisos: {{ context.permisos }}</p>
       <button class="danger" (click)="logout()">Sign-out</button>
     </div>
   </header>
@@ -53,10 +52,10 @@
         <thead>
           <tr>
             <th>Sel</th>
-            <th class="sortable" (click)="togglePendingSort('receivedDateTime')">Recepcion</th>
-            <th class="sortable" (click)="togglePendingSort('sender')">Usuario envio</th>
-            <th class="sortable" (click)="togglePendingSort('subject')">Subject</th>
-            <th class="sortable" (click)="togglePendingSort('summary')">Resumen</th>
+            <th class="sortable" (click)="togglePendingSort('receivedDateTime')" (keydown.enter)="togglePendingSort('receivedDateTime')" (keydown.space)="$event.preventDefault(); togglePendingSort('receivedDateTime')" tabindex="0">Recepcion</th>
+            <th class="sortable" (click)="togglePendingSort('sender')" (keydown.enter)="togglePendingSort('sender')" (keydown.space)="$event.preventDefault(); togglePendingSort('sender')" tabindex="0">Usuario envio</th>
+            <th class="sortable" (click)="togglePendingSort('subject')" (keydown.enter)="togglePendingSort('subject')" (keydown.space)="$event.preventDefault(); togglePendingSort('subject')" tabindex="0">Subject</th>
+            <th class="sortable" (click)="togglePendingSort('summary')" (keydown.enter)="togglePendingSort('summary')" (keydown.space)="$event.preventDefault(); togglePendingSort('summary')" tabindex="0">Resumen</th>
             <th>Tecnico</th>
             <th>Asignar</th>
           </tr>
@@ -95,6 +94,8 @@
         <h2>Incidencias asignadas ({{ incidenciasShownCount }}/{{ incidenciasTotalCount }} mostradas)</h2>
         <div class="inc-filter-row">
           <input placeholder="Filtrar incidencias por texto libre..." [(ngModel)]="incidenciasTextFilter" />
+          <input *ngIf="isTecnicoProfile" placeholder="Filtro técnico (por defecto tú)" [(ngModel)]="tecnicoScopeFilter" />
+          <label class="inline-check"><input type="checkbox" [(ngModel)]="showResolvedIncidencias" /> Mostrar resueltas</label>
         </div>
       </div>
       <div class="inc-actions">
@@ -109,7 +110,7 @@
     </div>
     <p *ngIf="!context.puedeVerCorreos" class="notice">Perfil {{ context.perfil }}: vista solo de incidencias asignadas.</p>
     <div class="cards-grid">
-      <article *ngFor="let inc of sortedIncidencias" class="inc-card" [class.in-progress]="inc.enProgreso && !inc.resuelta" [ngClass]="categoryStyleClass(inc)" [ngStyle]="categoryStyle(inc)" (click)="onIncCardClick($event, inc)">
+      <article *ngFor="let inc of sortedIncidencias" class="inc-card" [class.in-progress]="inc.enProgreso && !inc.resuelta" [ngClass]="categoryStyleClass(inc)" [ngStyle]="categoryStyle(inc)" (click)="onIncCardClick($event, inc)" (keydown.enter)="onIncCardClick($event, inc)" (keydown.space)="$event.preventDefault(); onIncCardClick($event, inc)" tabindex="0">
         <header class="inc-card-head">
           <strong>{{ inc.subject }}</strong>
           <span class="mono">{{ inc.categoriaAbreviatura || 'N/A' }} | {{ inc.enProgreso && !inc.resuelta ? 'CORRIGIENDOSE' : (inc.resuelta ? 'RESUELTA' : 'ASIGNADA') }}</span>
@@ -119,7 +120,7 @@
           <span>{{ inc.sender }}</span>
           <span>
             {{ inc.receivedDateTime | date: 'dd/MM/yyyy HH:mm' }} ·
-            <span class="priority-pill" [ngClass]="'priority-' + (inc.prioridad || 'NORMAL').toLowerCase()">
+            <span class="priority-pill" [ngClass]="'priority-' + (inc.prioridad || 'NORMAL').toLowerCase()" [ngStyle]="{ background: getPrioridadColorHex(inc.prioridad) }">
               {{ inc.prioridad || 'NORMAL' }}
             </span>
             ·
@@ -127,29 +128,23 @@
         </div>
         <div class="inc-controls">
           <label>Técnico
-            <select [(ngModel)]="selectedTecnicoByIncidenciaId[inc.id]" [disabled]="isReadOnlyIncidenciasProfile">
+            <select [(ngModel)]="selectedTecnicoByIncidenciaId[inc.id]" [disabled]="!canManageIncidencia(inc)">
               <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
             </select>
           </label>
           <label>Categoría
-            <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]" [disabled]="isReadOnlyIncidenciasProfile">
+            <select [(ngModel)]="selectedCategoriaByIncidenciaId[inc.id]" [disabled]="!canManageIncidencia(inc)">
               <option [ngValue]="null">Sin categoría</option>
               <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.abreviatura }}</option>
             </select>
           </label>
           <label *ngIf="context.perfil === 'ADMIN'">Prioridad
             <select [(ngModel)]="selectedPrioridadByIncidenciaId[inc.id]">
-              <option value="URGENTE">URGENTE</option>
-              <option value="ALTA">ALTA</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="BAJA">BAJA</option>
+              <option *ngFor="let p of prioridades" [value]="p.nombre">{{ p.nombre }}</option>
             </select>
           </label>
           <button class="secondary icon-btn" *ngIf="context.perfil === 'ADMIN'" (click)="startEditCategoria(selectedCategoriaByIncidenciaId[inc.id])">✎</button>
-          <label class="checkline">
-            <input type="checkbox" [(ngModel)]="selectedResueltaByIncidenciaId[inc.id]" />
-            Resuelta
-          </label>
+          <span class="resolved-indicator" *ngIf="inc.resuelta">✓ RESUELTA</span>
         </div>
       </article>
     </div>
@@ -198,12 +193,9 @@
       <button class="danger" (click)="closePrioridadModal()">Cerrar</button>
     </header>
     <section class="form-grid">
-      <label>Prioridad</label>
-      <select [(ngModel)]="pendingPrioridad">
-        <option value="URGENTE">URGENTE</option>
-        <option value="ALTA">ALTA</option>
-        <option value="NORMAL">NORMAL</option>
-        <option value="BAJA">BAJA</option>
+      <label for="prioridad-select">Prioridad</label>
+      <select id="prioridad-select" [(ngModel)]="pendingPrioridad">
+        <option *ngFor="let p of prioridades" [value]="p.nombre">{{ p.nombre }}</option>
       </select>
       <button class="secondary" (click)="confirmPrioridadAsignacion()">Confirmar asignación</button>
     </section>
@@ -220,61 +212,48 @@
     <p><strong>Remitente:</strong> {{ selectedIncidencia.sender }}</p>
     <p><strong>Tiempo transcurrido:</strong> {{ elapsedFromReceived(selectedIncidencia) }}</p>
     <div class="form-grid">
-      <select *ngIf="!isConsultaProfile" [(ngModel)]="notaTecnico">
+      <select *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" [(ngModel)]="notaTecnico">
         <option value="">Técnico</option>
         <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
       </select>
-      <input *ngIf="!isConsultaProfile" placeholder="Observación" [(ngModel)]="notaObservacion" />
-      <input *ngIf="!isConsultaProfile" placeholder="Acción realizada" [(ngModel)]="notaAccion" />
-      <textarea *ngIf="!isConsultaProfile" placeholder="Detalle técnico / informe" [(ngModel)]="notaDetalle"></textarea>
-      <button class="secondary" *ngIf="!isConsultaProfile" (click)="addNotaTratamiento()">Guardar Nota</button>
+      <input *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" placeholder="Observación" [(ngModel)]="notaObservacion" />
+      <input *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" placeholder="Acción realizada" [(ngModel)]="notaAccion" />
+      <textarea *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" placeholder="Detalle técnico / informe" [(ngModel)]="notaDetalle"></textarea>
+      <button class="secondary" *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" (click)="addNotaTratamiento()">Guardar Nota</button>
       <select *ngIf="context.perfil === 'ADMIN'" [(ngModel)]="redirigirTecnico">
         <option value="">Redirigir a técnico...</option>
         <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
       </select>
-      <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="redirigirIncidencia()">Redirigir</button>
-      <textarea *ngIf="!isConsultaProfile" placeholder="Descripción de resolución" [(ngModel)]="resolucionDescripcion"></textarea>
-      <button class="secondary" *ngIf="!isConsultaProfile" (click)="resolverIncidencia()">Resolver</button>
+      <button class="secondary" *ngIf="selectedIncidencia && canManageIncidencia(selectedIncidencia)" (click)="redirigirIncidencia()">Redirigir</button>
+      <textarea *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" placeholder="Descripción de resolución" [(ngModel)]="resolucionDescripcion"></textarea>
+      <button class="secondary" *ngIf="!isConsultaProfile && selectedIncidencia && canManageIncidencia(selectedIncidencia)" (click)="resolverIncidencia()">Resolver</button>
       <textarea *ngIf="context.perfil === 'CONSULTA'" placeholder="Motivo de rechazo" [(ngModel)]="rechazoMotivo"></textarea>
       <button class="danger" *ngIf="context.perfil === 'CONSULTA'" (click)="rechazarResolucion()">Rechazar resolución</button>
     </div>
     <h4>Histórico de tratamiento</h4>
-    <div class="notes-timeline">
-      <article *ngFor="let n of notasIncidencia" class="note-item">
-        <div><strong>{{ n.createdAt | date: 'dd/MM/yyyy HH:mm' }}</strong> · {{ n.accionRealizada }}</div>
-        <div><strong>Cambio:</strong> {{ n.detalle || n.observacion }}</div>
-        <div><strong>Quién:</strong> {{ n.tecnico }}</div>
-      </article>
-    </div>
-  </article>
-</section>
-
-<section class="treatment-modal" *ngIf="showTreatmentModal && selectedIncidencia">
-  <article class="treatment-dialog">
-    <header>
-      <h3>Tratamiento de Incidencia</h3>
-      <button class="danger" (click)="closeTreatmentModal()">Cerrar</button>
-    </header>
-    <p><strong>Asunto:</strong> {{ selectedIncidencia.subject }}</p>
-    <p><strong>Remitente:</strong> {{ selectedIncidencia.sender }}</p>
-    <div class="form-grid">
-      <select [(ngModel)]="notaTecnico">
-        <option value="">Técnico</option>
-        <option *ngFor="let tecnico of tecnicos" [value]="tecnico.nombre">{{ tecnico.nombre }}</option>
-      </select>
-      <input placeholder="Observación" [(ngModel)]="notaObservacion" />
-      <input placeholder="Acción realizada" [(ngModel)]="notaAccion" />
-      <textarea placeholder="Detalle técnico / informe" [(ngModel)]="notaDetalle"></textarea>
-      <button class="secondary" (click)="addNotaTratamiento()">Guardar Nota</button>
-    </div>
-    <h4>Histórico de tratamiento</h4>
-    <div class="notes-timeline">
-      <article *ngFor="let n of notasIncidencia" class="note-item">
-        <div><strong>{{ n.tecnico }}</strong> · {{ n.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
-        <div><strong>Obs:</strong> {{ n.observacion }}</div>
-        <div><strong>Acción:</strong> {{ n.accionRealizada }}</div>
-        <div><strong>Detalle:</strong> {{ n.detalle }}</div>
-      </article>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- Notas -->
+      <div>
+        <h5>Notas</h5>
+        <div class="notes-timeline">
+          <article *ngFor="let n of notasIncidencia" class="note-item">
+            <div><strong>{{ n.createdAt | date: 'dd/MM/yyyy HH:mm' }}</strong> · {{ n.accionRealizada }}</div>
+            <div><strong>Cambio:</strong> {{ n.detalle || n.observacion }}</div>
+            <div><strong>Quién:</strong> {{ n.tecnico }}</div>
+          </article>
+        </div>
+      </div>
+      <!-- Historial de cambios -->
+      <div>
+        <h5>Cambios realizados</h5>
+        <div class="notes-timeline">
+          <article *ngFor="let h of historicoIncidencia" class="note-item" style="background: #f0f9ff; border-left: 3px solid #3b82f6;">
+            <div><strong>{{ h.createdAt | date: 'dd/MM/yyyy HH:mm' }}</strong></div>
+            <div><strong>Cambio:</strong> {{ h.observacion }}</div>
+            <div><strong>Quién:</strong> {{ h.tecnico }}</div>
+          </article>
+        </div>
+      </div>
     </div>
   </article>
 </section>

@@ -163,6 +163,15 @@ public class InboxManagementController {
         return ResponseEntity.ok(useCase.getStats());
     }
 
+    @GetMapping("/incidencias/{incidenciaId}/historico")
+    public ResponseEntity<List<Object>> getHistorico(@PathVariable Long incidenciaId) {
+        try {
+            return ResponseEntity.ok(useCase.getHistoricoIncidencia(incidenciaId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
     @PostMapping("/incidencias/{incidenciaId}/notas")
     public ResponseEntity<Void> addNota(@PathVariable Long incidenciaId, @Valid @RequestBody IncidenciaNotaCreateRequest request) {
         useCase.addNota(incidenciaId, request.getTecnico(), request.getObservacion(), request.getDetalle(), request.getAccionRealizada());
