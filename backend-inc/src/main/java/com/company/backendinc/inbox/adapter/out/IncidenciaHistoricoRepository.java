@@ -29,9 +29,9 @@ public class IncidenciaHistoricoRepository {
                         rs.getLong("id"),
                         rs.getLong("incidencia_id"),
                         rs.getString("actor"),
-                        "CAMBIO",
                         rs.getString("descripcion"),
-                        rs.getString("descripcion"),
+                        "",
+                        "Cambio registrado",
                         rs.getString("created_at")),
                 incidenciaId);
     }

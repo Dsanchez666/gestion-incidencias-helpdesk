@@ -3,8 +3,10 @@ package com.company.backendinc.security;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,6 +39,15 @@ public class GlobalExceptionHandler {
         body.put("error", "bad_request");
         body.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler({CannotGetJdbcConnectionException.class, DataAccessResourceFailureException.class})
+    public ResponseEntity<Map<String, Object>> handleDbConnection(Exception ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "db_env_missing");
+        body.put("message", "No se pudo conectar con la BBDD. Revisa variables de entorno DB_URL, DB_USER y DB_PASS.");
+        body.put("example", "DB_URL=jdbc:mysql://localhost:3306/GestionIncidencias?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC, DB_USER=GestorIncidencias, DB_PASS=********");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     @ExceptionHandler(Exception.class)

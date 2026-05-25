@@ -20,23 +20,41 @@ public class IncidenciaInboxRepository {
 
     public void upsert(IncidenciaInboxItem item) {
         ensureTable();
+        Long prioridadId = null;
+        if (item.getPrioridad() != null && !item.getPrioridad().isBlank()) {
+            // Resolver el ID de prioridad desde el nombre
+            String sql2 = "SELECT id FROM prioridad WHERE nombre = ?";
+            List<Long> ids = jdbcTemplate.queryForList(sql2, Long.class, item.getPrioridad());
+            if (!ids.isEmpty()) {
+                prioridadId = ids.get(0);
+            }
+        }
+        // Si no se encuentra, usa NORMAL por defecto
+        if (prioridadId == null) {
+            String sql2 = "SELECT id FROM prioridad WHERE nombre = 'NORMAL'";
+            List<Long> ids = jdbcTemplate.queryForList(sql2, Long.class);
+            if (!ids.isEmpty()) {
+                prioridadId = ids.get(0);
+            }
+        }
         String sql = "INSERT INTO incidencia_inbox "
-                + "(message_id, mailbox, received_date_time, sender, subject, summary, tecnico_asignado, tecnico_email, categoria_id, prioridad, resuelta, rechazada, resolved_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, NULL) "
+                + "(message_id, mailbox, received_date_time, sender, subject, summary, tecnico_asignado, tecnico_email, categoria_id, prioridad_id, resuelta, en_progreso, resolved_at, assigned_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, NULL, CURRENT_TIMESTAMP) "
                 + "ON DUPLICATE KEY UPDATE "
                 + "mailbox = VALUES(mailbox), received_date_time = VALUES(received_date_time), sender = VALUES(sender), "
                 + "subject = VALUES(subject), summary = VALUES(summary), tecnico_asignado = VALUES(tecnico_asignado), "
-                + "tecnico_email = VALUES(tecnico_email), categoria_id = VALUES(categoria_id), prioridad = VALUES(prioridad), assigned_at = CURRENT_TIMESTAMP";
+                + "tecnico_email = VALUES(tecnico_email), categoria_id = VALUES(categoria_id), prioridad_id = VALUES(prioridad_id), assigned_at = CURRENT_TIMESTAMP";
         jdbcTemplate.update(sql, item.getMessageId(), item.getMailbox(), item.getReceivedDateTime(), item.getSender(), item.getSubject(),
-                item.getSummary(), item.getTecnicoAsignado(), item.getTecnicoEmail(), item.getCategoriaId(), item.getPrioridad());
+                item.getSummary(), item.getTecnicoAsignado(), item.getTecnicoEmail(), item.getCategoriaId(), prioridadId);
     }
 
     public List<IncidenciaInboxItem> list() {
         ensureTable();
         String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
-                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
-                + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
-                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id ORDER BY assigned_at DESC";
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, "
+                + "COALESCE(p.nombre, 'NORMAL') AS prioridad, i.resuelta, i.en_progreso, "
+                + "DATE_FORMAT(i.assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
+                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id LEFT JOIN prioridad p ON p.id = i.prioridad_id ORDER BY i.assigned_at DESC";
         return jdbcTemplate.query(sql, (rs, rowNum) -> new IncidenciaInboxItem(
                 rs.getLong("id"),
                 rs.getString("message_id"),
@@ -83,9 +101,10 @@ public class IncidenciaInboxRepository {
     public IncidenciaInboxItem findById(Long incidenciaId) {
         ensureTable();
         String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
-                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
-                + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
-                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id WHERE i.id = ? LIMIT 1";
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, "
+                + "COALESCE(p.nombre, 'NORMAL') AS prioridad, i.resuelta, i.en_progreso, "
+                + "DATE_FORMAT(i.assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
+                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id LEFT JOIN prioridad p ON p.id = i.prioridad_id WHERE i.id = ? LIMIT 1";
         return jdbcTemplate.query(sql, ps -> ps.setLong(1, incidenciaId), rs -> rs.next()
                 ? new IncidenciaInboxItem(
                         rs.getLong("id"),
@@ -110,9 +129,10 @@ public class IncidenciaInboxRepository {
     public IncidenciaInboxItem findByMessageId(String messageId) {
         ensureTable();
         String sql = "SELECT i.id, i.message_id, i.mailbox, i.received_date_time, i.sender, i.subject, i.summary, i.tecnico_asignado, "
-                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, i.prioridad, i.resuelta, i.en_progreso, "
-                + "DATE_FORMAT(assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
-                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id WHERE i.message_id = ? LIMIT 1";
+                + "i.tecnico_email, i.categoria_id, c.abreviatura AS categoria_abreviatura, c.color_hex AS categoria_color_hex, "
+                + "COALESCE(p.nombre, 'NORMAL') AS prioridad, i.resuelta, i.en_progreso, "
+                + "DATE_FORMAT(i.assigned_at, '%Y-%m-%dT%H:%i:%s') as assigned_at "
+                + "FROM incidencia_inbox i LEFT JOIN categoria c ON c.id = i.categoria_id LEFT JOIN prioridad p ON p.id = i.prioridad_id WHERE i.message_id = ? LIMIT 1";
         return jdbcTemplate.query(sql, ps -> ps.setString(1, messageId), rs -> rs.next()
                 ? new IncidenciaInboxItem(
                         rs.getLong("id"),
@@ -136,7 +156,21 @@ public class IncidenciaInboxRepository {
 
     public void updatePrioridad(Long incidenciaId, String prioridad) {
         ensureTable();
-        jdbcTemplate.update("UPDATE incidencia_inbox SET prioridad = ? WHERE id = ?", prioridad, incidenciaId);
+        Long prioridadId = null;
+        if (prioridad != null && !prioridad.isBlank()) {
+            List<Long> ids = jdbcTemplate.queryForList("SELECT id FROM prioridad WHERE nombre = ?", Long.class, prioridad);
+            if (!ids.isEmpty()) {
+                prioridadId = ids.get(0);
+            }
+        }
+        // Si no se encuentra, usa NORMAL por defecto
+        if (prioridadId == null) {
+            List<Long> ids = jdbcTemplate.queryForList("SELECT id FROM prioridad WHERE nombre = 'NORMAL'", Long.class);
+            if (!ids.isEmpty()) {
+                prioridadId = ids.get(0);
+            }
+        }
+        jdbcTemplate.update("UPDATE incidencia_inbox SET prioridad_id = ? WHERE id = ?", prioridadId, incidenciaId);
     }
 
     public void resolveWithDescription(Long incidenciaId, String descripcionResolucion, String actor) {
@@ -222,6 +256,12 @@ public class IncidenciaInboxRepository {
                 ORDER BY tecnico_asignado
                 """;
         return jdbcTemplate.queryForList(sql, month.getYear(), month.getMonthValue());
+    }
+
+    public List<String> listMessageIdsWithIncidencias() {
+        ensureTable();
+        String sql = "SELECT DISTINCT message_id FROM incidencia_inbox WHERE message_id IS NOT NULL";
+        return jdbcTemplate.queryForList(sql, String.class);
     }
 
     private void ensureTable() {
