@@ -47,7 +47,7 @@
     </div>
     <section *ngIf="loading" class="notice">Cargando correos recibidos...</section>
     <section *ngIf="error" class="error">{{ error }}</section>
-    <div class="table-wrap" *ngIf="!loading && !error">
+    <div class="table-wrap" *ngIf="!loading && !error" (scroll)="onPendingPanelScroll($event)">
       <table>
         <thead>
           <tr>
@@ -86,6 +86,7 @@
         </tbody>
       </table>
     </div>
+    <section *ngIf="loadingMorePending" class="notice">Cargando más correos...</section>
   </section>
 
   <section class="incidencias-panel" [class.full-height]="!context.puedeVerCorreos">
