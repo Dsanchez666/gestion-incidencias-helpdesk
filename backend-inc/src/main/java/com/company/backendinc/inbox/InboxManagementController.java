@@ -25,9 +25,12 @@ public class InboxManagementController {
     }
 
     @GetMapping
-    public ResponseEntity<List<InboxItem>> list(@RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength)
+    public ResponseEntity<List<InboxItem>> list(
+            @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
+            @RequestParam(name = "offset", defaultValue = "0") int offset,
+            @RequestParam(name = "limit", defaultValue = "100") int limit)
             throws IOException {
-        return ResponseEntity.ok(useCase.listInbox(summaryLength));
+        return ResponseEntity.ok(useCase.listInbox(summaryLength, offset, limit));
     }
 
     @GetMapping("/context")

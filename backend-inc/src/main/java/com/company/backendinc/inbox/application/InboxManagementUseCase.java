@@ -87,6 +87,10 @@ public class InboxManagementUseCase {
     }
 
     public List<InboxItem> listInbox(int summaryLength) throws IOException {
+        return listInbox(summaryLength, 0, 100);
+    }
+
+    public List<InboxItem> listInbox(int summaryLength, int offset, int limit) throws IOException {
         String accessToken = tokenStore.getValidAccessToken()
                 .orElseThrow(() -> new IllegalStateException("Login requerido"));
 
@@ -101,9 +105,12 @@ public class InboxManagementUseCase {
         }
 
         MailboxEntry mailbox = mailboxes.get(0);
+        int safeOffset = Math.max(0, offset);
+        int safeLimit = Math.max(1, Math.min(limit, 200));
         String url = UriComponentsBuilder.fromHttpUrl(graphBaseUrl)
                 .path("/users/{id}/mailFolders/inbox/messages")
-                .queryParam("$top", 100)
+                .queryParam("$top", safeLimit)
+                .queryParam("$skip", safeOffset)
                 .queryParam("$select", "id,subject,from,receivedDateTime,bodyPreview")
                 .buildAndExpand(mailbox.getDireccionCorreo())
                 .toUriString();

@@ -21,8 +21,8 @@ export class InboxApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  list(summaryLength: number): Observable<InboxItem[]> {
-    return this.http.get<InboxItem[]>(`${this.inboxUrl}?summaryLength=${summaryLength}`);
+  list(summaryLength: number, offset = 0, limit = 100): Observable<InboxItem[]> {
+    return this.http.get<InboxItem[]>(`${this.inboxUrl}?summaryLength=${summaryLength}&offset=${offset}&limit=${limit}`);
   }
 
   context(): Observable<InboxContext> {

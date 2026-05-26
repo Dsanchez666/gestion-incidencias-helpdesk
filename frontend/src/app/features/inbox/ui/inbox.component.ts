@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { DatePipe, NgClass, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -34,7 +34,7 @@ type IncSortKey =
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.scss'
 })
-export class InboxComponent {
+export class InboxComponent implements OnDestroy {
   private static readonly INTERACTIVE_CLICK_SELECTOR =
     'select, input, textarea, button, a, label, option, [role="button"], [data-no-open-modal]';
   context: InboxContext = {
@@ -100,6 +100,12 @@ export class InboxComponent {
   pendingSort: { key: PendingSortKey; dir: SortDir } = { key: 'receivedDateTime', dir: 'desc' };
   incidenciasSort: { key: IncSortKey; dir: SortDir } = { key: 'assignedAt', dir: 'desc' };
   filters = { generic: '', sender: '', subject: '', summary: '', tecnico: '' };
+  private nowMs = Date.now();
+  private elapsedTimerId: ReturnType<typeof setInterval> | null = null;
+  private readonly inboxPageSize = 100;
+  private inboxOffset = 0;
+  loadingMorePending = false;
+  hasMorePending = true;
 
   constructor(
     private readonly inboxApi: InboxApiService,
@@ -107,6 +113,9 @@ export class InboxComponent {
     private readonly logoutUseCase: LogoutUseCase,
     private readonly router: Router
   ) {
+    this.elapsedTimerId = setInterval(() => {
+      this.nowMs = Date.now();
+    }, 60000);
     this.config.getPreviewLength().subscribe((length) => {
       this.summaryLength = length;
       if (this.context.puedeVerCorreos) this.refresh();
@@ -122,9 +131,14 @@ export class InboxComponent {
     this.loading = true;
     this.error = '';
     this.selectedMessageIds.clear();
-    this.inboxApi.list(this.summaryLength).subscribe({
+    this.items = [];
+    this.inboxOffset = 0;
+    this.hasMorePending = true;
+    this.inboxApi.list(this.summaryLength, 0, this.inboxPageSize).subscribe({
       next: (items) => {
         this.items = items;
+        this.inboxOffset = items.length;
+        this.hasMorePending = items.length === this.inboxPageSize;
         this.loading = false;
       },
       error: () => {
@@ -132,6 +146,38 @@ export class InboxComponent {
         this.items = [];
         this.loading = false;
         this.handleFatalBackendError();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.elapsedTimerId) {
+      clearInterval(this.elapsedTimerId);
+      this.elapsedTimerId = null;
+    }
+  }
+
+  onPendingPanelScroll(event: Event): void {
+    if (this.loading || this.loadingMorePending || !this.hasMorePending) return;
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 120;
+    if (!nearBottom) return;
+    this.loadMorePending();
+  }
+
+  private loadMorePending(): void {
+    this.loadingMorePending = true;
+    this.inboxApi.list(this.summaryLength, this.inboxOffset, this.inboxPageSize).subscribe({
+      next: (items) => {
+        this.items = [...this.items, ...items];
+        this.inboxOffset += items.length;
+        this.hasMorePending = items.length === this.inboxPageSize;
+        this.loadingMorePending = false;
+      },
+      error: () => {
+        this.loadingMorePending = false;
+        this.hasMorePending = false;
       }
     });
   }
@@ -152,27 +198,15 @@ export class InboxComponent {
         .includes(t);
     });
     return [...filtered].sort((a, b) => {
-      // Grupo 1: Sin resolver (prioritarias)
-      // Grupo 2: En progreso
-      // Grupo 3: Resueltas
-      const aResuelto = a.resuelta ? 2 : 0;
-      const bResuelto = b.resuelta ? 2 : 0;
-      const aEnProgreso = a.enProgreso && !a.resuelta ? 1 : 0;
-      const bEnProgreso = b.enProgreso && !b.resuelta ? 1 : 0;
-      
-      const aGrupo = aResuelto || aEnProgreso; // 0 = sin resolver, 1 = en progreso, 2 = resuelta
-      const bGrupo = bResuelto || bEnProgreso;
-      
-      if (aGrupo !== bGrupo) return aGrupo - bGrupo;
-      
-      // Dentro del mismo grupo, ordenar por fecha
-      if (aGrupo === 2) {
-        // Resueltas: ordenar por fecha de recepción más reciente primero (descendente)
-        return this.toMillis(b.receivedDateTime) - this.toMillis(a.receivedDateTime);
-      } else {
-        // Sin resolver o en progreso: ordenar por fecha de asignación más antigua primero (ascendente)
-        return this.toMillis(a.assignedAt) - this.toMillis(b.assignedAt);
+      if (a.resuelta !== b.resuelta) return a.resuelta ? 1 : -1;
+      if (!a.resuelta) {
+        const byPriority = this.priorityRank(a.prioridad) - this.priorityRank(b.prioridad);
+        if (byPriority !== 0) return byPriority;
+        return this.getReceivedMillis(a) - this.getReceivedMillis(b);
       }
+      const aResolvedAt = this.getResolvedAtMillis(a);
+      const bResolvedAt = this.getResolvedAtMillis(b);
+      return aResolvedAt - bResolvedAt;
     });
   }
 
@@ -533,7 +567,7 @@ export class InboxComponent {
   elapsedFromReceived(inc: IncidenciaInboxItem): string {
     const start = Date.parse(inc.receivedDateTime ?? '');
     if (Number.isNaN(start)) return '';
-    const diffMin = Math.max(0, Math.floor((Date.now() - start) / 60000));
+    const diffMin = Math.max(0, Math.floor((this.nowMs - start) / 60000));
     const d = Math.floor(diffMin / (60 * 24));
     const h = Math.floor((diffMin % (60 * 24)) / 60);
     const m = diffMin % 60;
@@ -671,6 +705,22 @@ export class InboxComponent {
   private toMillis(value: string | undefined): number {
     const ms = Date.parse(value ?? '');
     return Number.isNaN(ms) ? Number.MAX_SAFE_INTEGER : ms;
+  }
+
+  private getResolvedAtMillis(inc: IncidenciaInboxItem): number {
+    const resolvedAt = (inc as IncidenciaInboxItem & { resolvedAt?: string }).resolvedAt;
+    return this.toMillis(resolvedAt ?? inc.assignedAt ?? inc.receivedDateTime);
+  }
+
+  private getReceivedMillis(inc: IncidenciaInboxItem): number {
+    const received = this.toMillisOrNaN(inc.receivedDateTime);
+    if (!Number.isNaN(received)) return received;
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  private toMillisOrNaN(value: string | undefined): number {
+    const ms = Date.parse(value ?? '');
+    return Number.isNaN(ms) ? Number.NaN : ms;
   }
 
   private handleFatalBackendError(err?: unknown): void {
