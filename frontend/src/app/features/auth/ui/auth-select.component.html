@@ -1,0 +1,18 @@
+<section class="auth-select-layout">
+  <article class="auth-select-card">
+    <h1>Gestion de Incidencias ETNA</h1>
+    <p>Elige tu método de autenticación</p>
+
+    <button class="auth-button entra-button" (click)="loginWithEntra()">
+      <span class="icon">🔐</span>
+      <span class="label">Entrar con Microsoft Entra ID</span>
+      <span class="description">Autenticación de empresa</span>
+    </button>
+
+    <button class="auth-button credentials-button" (click)="loginWithCredentials()">
+      <span class="icon">👤</span>
+      <span class="label">Entrar con Usuario y Contraseña</span>
+      <span class="description">Credenciales locales</span>
+    </button>
+  </article>
+</section>

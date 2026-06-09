@@ -15,7 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
-    private static final int AUTH_MAX_ATTEMPTS = 5;
+    private static final int AUTH_MAX_ATTEMPTS = 10;
     private static final Duration AUTH_WINDOW = Duration.ofMinutes(15);
     private static final int API_MAX_ATTEMPTS = 300;
     private static final Duration API_WINDOW = Duration.ofMinutes(15);
@@ -26,7 +26,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
+        String method = request.getMethod();
         String ip = extractClientIp(request);
+
+        // Don't rate limit status checks and certain endpoints
+        if (isExemptFromRateLimit(path, method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         boolean isAuthRoute = path.startsWith("/api/auth");
         int maxAttempts = isAuthRoute ? AUTH_MAX_ATTEMPTS : API_MAX_ATTEMPTS;
         Duration window = isAuthRoute ? AUTH_WINDOW : API_WINDOW;
@@ -51,6 +59,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isExemptFromRateLimit(String path, String method) {
+        // Exempt GET status checks from rate limiting
+        if ("GET".equals(method) && path.contains("/status")) {
+            return true;
+        }
+        // Exempt callback endpoints
+        if (path.contains("/callback")) {
+            return true;
+        }
+        return false;
     }
 
     private String extractClientIp(HttpServletRequest request) {

@@ -411,14 +411,14 @@ public class InboxManagementUseCase {
 
     public void resolveIncidencia(Long incidenciaId, String descripcionResolucion) {
         ensureNotConsulta();
-        if (descripcionResolucion == null || descripcionResolucion.isBlank()) {
-            throw new IllegalArgumentException("Descripcion de resolución obligatoria");
-        }
         IncidenciaInboxItem inc = incidenciaInboxRepository.findById(incidenciaId);
         if (inc == null) throw new IllegalArgumentException("Incidencia no encontrada");
         String actor = currentActor();
-        incidenciaInboxRepository.resolveWithDescription(incidenciaId, descripcionResolucion, actor);
-        incidenciaHistoricoRepository.addEvento(incidenciaId, actor, "Incidencia resuelta: " + descripcionResolucion);
+        String descripcionNormalizada = (descripcionResolucion == null || descripcionResolucion.isBlank())
+                ? "Resuelta sin observaciones"
+                : descripcionResolucion.trim();
+        incidenciaInboxRepository.resolveWithDescription(incidenciaId, descripcionNormalizada, actor);
+        incidenciaHistoricoRepository.addEvento(incidenciaId, actor, "Incidencia resuelta: " + descripcionNormalizada);
         String token = incidenciaTrackingRepository.createToken(incidenciaId);
         String enlace = "http://localhost:4200/seguimiento/" + token;
         notificationGateway.sendEmail(new TecnicoNotificationGateway.EmailRequest(
@@ -426,7 +426,7 @@ public class InboxManagementUseCase {
                 "Incidencia resuelta - " + inc.getSubject(),
                 "Tu incidencia ha sido marcada como resuelta.\n\n"
                         + "Asunto: " + inc.getSubject() + "\n"
-                        + "Resolución: " + descripcionResolucion + "\n\n"
+                        + "Resolución: " + descripcionNormalizada + "\n\n"
                         + "Puedes consultar el detalle en:\n"
                         + enlace + "\n",
                 null,

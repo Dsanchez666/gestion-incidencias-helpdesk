@@ -34,10 +34,35 @@
   width: auto;
 }
 input, select { border: 1px solid #bfc5d0; border-radius: 6px; padding: 3px 6px; width: 100%; background: #fff; font-size: 0.8rem; height: 26px; }
-.pending-panel, .incidencias-panel { padding: 8px 16px 12px; overflow: auto; }
+.pending-panel, .incidencias-panel { padding: 8px 16px 12px; }
+.pending-panel { overflow: auto; }
+.incidencias-panel {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  align-content: start;
+  gap: 8px;
+}
 .incidencias-panel.full-height { height: 100%; min-height: 0; }
 .pending-panel { background: #fff; padding-bottom: 20px; }
 .bulk-row, .inc-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.inc-head {
+  position: relative;
+  background: #f5f6f8;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid #d8dce3;
+  box-shadow: none;
+}
+.inc-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+.inc-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-bottom: 0;
+}
 .pending-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
 .pending-head h2 { margin: 0; }
 .pending-head .bulk-row { margin-bottom: 0; min-width: 420px; }
@@ -81,7 +106,15 @@ button { border: 0; border-radius: 8px; cursor: pointer; }
   color: #1d4ed8;
 }
 
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; }
+.cards-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 10px;
+  align-content: start;
+  padding-right: 4px;
+}
 .inc-card {
   background: #fff; border: 1px solid #d8dce3; border-radius: 14px; padding: 12px;
   box-shadow: 0 2px 0 #e5e7eb;
@@ -152,6 +185,13 @@ button { border: 0; border-radius: 8px; cursor: pointer; }
 .inc-title-row h2 { margin: 4px 0; white-space: nowrap; }
 .inc-filter-row { margin: 0; flex: 1; min-width: 220px; display: flex; align-items: center; gap: 16px; }
 .inc-filter-row input { width: 100%; max-width: 520px; }
+.inc-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 14px;
+  flex-wrap: wrap;
+}
 .icon-btn { padding: 2px 4px; min-width: 24px; width: 24px; height: 24px; line-height: 1; justify-self: center; font-size: 0.78rem; }
 
 .admin-modal {

@@ -1,32 +1,37 @@
 <section class="login-layout">
   <article class="login-card">
     <h1>Gestion de Incidencias ETNA</h1>
-    <p>Acceso de operadores con Entra ID.</p>
+    <p>Sistema de gestión para operadores</p>
 
-    <label>
-      Usuario Entra ID
-      <input [(ngModel)]="username" placeholder="Ej. operador" />
-    </label>
+    <form (ngSubmit)="submit()">
+      <label>
+        Usuario Entra ID
+        <input [(ngModel)]="username" name="username" placeholder="Ej. operador" />
+      </label>
 
-    <label>
-      Clave Entra ID
-      <input [(ngModel)]="password" type="password" placeholder="Introduce tu clave" />
-    </label>
+      <label>
+        Clave Entra ID
+        <input [(ngModel)]="password" name="password" type="password" placeholder="Introduce tu clave" />
+      </label>
 
-    <button [disabled]="isLoading" (click)="submit()">
-      {{ isLoading ? 'Validando...' : 'Entrar' }}
-    </button>
-    <button class="entra-btn" [disabled]="isLoading" (click)="loginConEntra()">
-      Entrar con EntraID
-    </button>
+      <button type="submit" [disabled]="isLoading">
+        {{ isLoading ? 'Validando...' : 'Entrar' }}
+      </button>
 
-    <p class="error" *ngIf="error">{{ error }}</p>
+      <button type="button" class="entra-btn" [disabled]="isLoading" (click)="loginConEntra()">
+        Entrar con EntraID
+      </button>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </form>
+
     <hr />
+
     <label>
       ¿Olvidaste tu contraseña? Usuario o email
       <input [(ngModel)]="recoverUserOrEmail" placeholder="usuario o correo" />
     </label>
-    <button [disabled]="isLoading || !recoverUserOrEmail" (click)="recoverPassword()">
+    <button [disabled]="isLoading || !recoverUserOrEmail" (click)="recoverPassword()" type="button">
       Recuperar contraseña
     </button>
     <p *ngIf="recoverMessage">{{ recoverMessage }}</p>

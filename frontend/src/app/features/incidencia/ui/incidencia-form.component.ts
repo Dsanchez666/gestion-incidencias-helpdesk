@@ -58,6 +58,6 @@ export class IncidenciaFormComponent {
 
   logout(): void {
     this.logoutUseCase.execute();
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/auth-select');
   }
 }

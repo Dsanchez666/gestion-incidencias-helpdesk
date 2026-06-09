@@ -97,16 +97,16 @@
           <input placeholder="Filtrar incidencias por texto libre..." [(ngModel)]="incidenciasTextFilter" />
           <input *ngIf="isTecnicoProfile" placeholder="Filtro técnico (por defecto tú)" [(ngModel)]="tecnicoScopeFilter" />
           <label class="inline-check"><input type="checkbox" [(ngModel)]="showResolvedIncidencias" /> Mostrar resueltas</label>
+          <div class="inc-inline-actions">
+            <button class="secondary" (click)="categorizarAutomatico()">Categorización Automática</button>
+            <button class="secondary" (click)="openStats()">Estadísticas</button>
+            <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('tecnico')">+ Técnico</button>
+            <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('categoria')">+ Categoría</button>
+            <button class="secondary" [disabled]="savingIncidencias || isReadOnlyIncidenciasProfile" (click)="saveIncidenciasPendientes()">
+              {{ savingIncidencias ? 'Guardando...' : 'Guardar Cambios' }}
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="inc-actions">
-        <button class="secondary" (click)="categorizarAutomatico()">Categorización Automática</button>
-        <button class="secondary" (click)="openStats()">Estadísticas</button>
-        <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('tecnico')">+ Técnico</button>
-        <button class="secondary" *ngIf="context.perfil === 'ADMIN'" (click)="openAdminModal('categoria')">+ Categoría</button>
-        <button class="secondary" [disabled]="savingIncidencias || isReadOnlyIncidenciasProfile" (click)="saveIncidenciasPendientes()">
-          {{ savingIncidencias ? 'Guardando...' : 'Guardar Cambios' }}
-        </button>
       </div>
     </div>
     <p *ngIf="!context.puedeVerCorreos" class="notice">Perfil {{ context.perfil }}: vista solo de incidencias asignadas.</p>

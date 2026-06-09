@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app/app.component';
 import { IncidenciaFormComponent } from './app/features/incidencia/ui/incidencia-form.component';
 import { LoginComponent } from './app/features/auth/ui/login.component';
+import { AuthSelectComponent } from './app/features/auth/ui/auth-select.component';
 import { StartupComponent } from './app/features/auth/ui/startup.component';
 import { ResetPasswordComponent } from './app/features/auth/ui/reset-password.component';
 import { MailboxListComponent } from './app/features/mailbox/ui/mailbox-list.component';
@@ -26,6 +27,7 @@ import { MAILBOX_API_PORT } from './app/features/mailbox/application/port/out/ma
 
 const routes: Routes = [
   { path: '', component: SplashComponent },
+  { path: 'auth-select', component: AuthSelectComponent },
   { path: 'startup', component: StartupComponent },
   { path: 'login', component: LoginComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
