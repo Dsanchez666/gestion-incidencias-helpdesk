@@ -205,6 +205,6 @@ export class MailboxListComponent {
 
   logout(): void {
     this.logoutUseCase.execute();
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/auth-select');
   }
 }

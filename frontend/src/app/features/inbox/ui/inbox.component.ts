@@ -543,7 +543,7 @@ export class InboxComponent implements OnDestroy {
   }
 
   resolverIncidencia(): void {
-    if (!this.selectedIncidencia || !this.resolucionDescripcion) return;
+    if (!this.selectedIncidencia) return;
     this.inboxApi.resolveIncidencia(this.selectedIncidencia.id, this.resolucionDescripcion).subscribe({
       next: () => {
         this.resolucionDescripcion = '';
@@ -643,7 +643,7 @@ export class InboxComponent implements OnDestroy {
 
   logout(): void {
     this.logoutUseCase.execute();
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/auth-select');
   }
 
   openPrioridadModal(): void {
