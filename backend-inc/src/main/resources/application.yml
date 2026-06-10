@@ -17,6 +17,7 @@ spring:
 app:
   notifications:
     from: no-reply@gestion-incidencias.local
+  
 
 spring.servlet:
   multipart:

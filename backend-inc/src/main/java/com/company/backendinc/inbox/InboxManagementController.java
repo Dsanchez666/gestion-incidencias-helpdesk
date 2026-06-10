@@ -63,46 +63,46 @@ public class InboxManagementController {
     }
 
     @PostMapping("/{messageId}/asignar-incidencia")
-    public ResponseEntity<Void> assignIncidencia(@PathVariable String messageId,
+    public ResponseEntity<Object> assignIncidencia(@PathVariable String messageId,
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
             @Valid @RequestBody AsignarIncidenciaRequest request) throws IOException {
         try {
             useCase.assignIncidencia(messageId, request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("error", ex.getMessage()));
         }
     }
 
     @PostMapping("/asignar-incidencias")
-    public ResponseEntity<Void> assignIncidencias(
+    public ResponseEntity<Object> assignIncidencias(
             @RequestParam(name = "summaryLength", defaultValue = "50") int summaryLength,
             @Valid @RequestBody AsignarIncidenciasRequest request) throws IOException {
         try {
             useCase.assignIncidencias(request.getMessageIds(), request.getTecnicoNombre(), request.getPrioridad(), summaryLength);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("error", ex.getMessage()));
         }
     }
 
     @PatchMapping("/incidencias/{incidenciaId}/categoria")
-    public ResponseEntity<Void> updateCategoria(@PathVariable Long incidenciaId, @RequestBody CategoriaUpdateRequest request) {
+    public ResponseEntity<Object> updateCategoria(@PathVariable Long incidenciaId, @RequestBody CategoriaUpdateRequest request) {
         try {
             useCase.updateCategoria(incidenciaId, request.getCategoriaId());
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("error", ex.getMessage()));
         }
     }
 
     @PatchMapping("/incidencias/{incidenciaId}/tecnico")
-    public ResponseEntity<Void> updateTecnico(@PathVariable Long incidenciaId, @RequestBody TecnicoIncidenciaUpdateRequest request) {
+    public ResponseEntity<Object> updateTecnico(@PathVariable Long incidenciaId, @RequestBody TecnicoIncidenciaUpdateRequest request) {
         try {
             useCase.updateTecnicoIncidencia(incidenciaId, request.getTecnicoNombre());
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("error", ex.getMessage()));
         }
     }
 

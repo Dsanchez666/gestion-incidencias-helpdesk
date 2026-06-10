@@ -175,14 +175,17 @@ public class InboxManagementUseCase {
 
         Tecnico tecnico = tecnicoRepository.findActivoByUserHint(usuarioSimple);
         String perfil;
-        boolean puedeVerCorreos;
+        boolean puedeVerCorreos = canReadMailbox();
 
-        if (tecnico != null) {
-            perfil = "RESOLUTOR";
-            puedeVerCorreos = false;
-        } else {
+        if (puedeVerCorreos) {
+            // Si puede leer el buzón configurado, tiene rol ADMIN
             perfil = "ADMIN";
-            puedeVerCorreos = true;
+        } else if (tecnico != null) {
+            // Si no puede leer el buzón pero es técnico activo, es RESOLUTOR
+            perfil = "RESOLUTOR";
+        } else {
+            // Ni admin por acceso al buzón ni técnico: modo consulta
+            perfil = "CONSULTA";
         }
 
         return new InboxContext(
@@ -687,7 +690,14 @@ public class InboxManagementUseCase {
         String account = tokenStore.getAccountHint();
         String usuario = (account == null || account.isBlank()) ? "" : account;
         String usuarioSimple = usuario.contains("@") ? usuario.substring(0, usuario.indexOf('@')) : usuario;
+        // If the user can read the configured mailbox they are ADMIN.
+        if (canReadMailbox()) {
+            return "ADMIN";
+        }
         Tecnico tecnico = tecnicoRepository.findActivoByUserHint(usuarioSimple);
-        return (tecnico != null) ? "RESOLUTOR" : "ADMIN";
+        if (tecnico != null) {
+            return "RESOLUTOR";
+        }
+        return "CONSULTA";
     }
 }
