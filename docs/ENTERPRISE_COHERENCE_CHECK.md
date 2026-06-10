@@ -21,6 +21,8 @@ El proyecto nuevo **esta mayoritariamente alineado** con el prompt enterprise a 
 3. Seguridad
 - Configuracion de seguridad separada.
 - `@RestControllerAdvice` para no filtrar stack traces.
+ - Se ha introducido `SecurityConfiguration` con CORS expuesto para soportar los flujos de arranque del frontend.
+ - A帽adidos `CustomTokenAuthenticationFilter` y `CustomAuthenticationProvider` para aceptar tokens de aplicaci贸n y soportar sesiones EntraID.
 
 4. Testing por capas
 - Dominio: `EmailValueObjectTest`.
@@ -32,7 +34,7 @@ El proyecto nuevo **esta mayoritariamente alineado** con el prompt enterprise a 
 - Separacion entre caso de uso, servicio API y componente UI.
 
 6. Tooling
-- Configuracion ESLint y Prettier a馻dida.
+- Configuracion ESLint y Prettier a锟絘dida.
 - Recomendacion SonarLint incluida para VS Code.
 
 ## Gaps detectados
@@ -43,5 +45,9 @@ El proyecto nuevo **esta mayoritariamente alineado** con el prompt enterprise a 
 4. No hay estrategia de migraciones DB versionadas (Flyway/Liquibase).
 
 ## Resultado
+
+Acciones recientes sugeridas:
+- Revisar y documentar la fuente de verdad para roles (claims de EntraID vs tablas locales) y la pol铆tica de resoluci贸n de perfiles.
+- A帽adir integraci贸n con migraciones DB (Flyway/Liquibase) antes de producci贸n.
 
 Se proponen issues para cerrar los gaps antes de merge/tag de release.

@@ -21,6 +21,18 @@ Referencia obligatoria del proyecto:
 - Frontend: Angular, TypeScript, RxJS.
 - Tooling: ESLint, Prettier, SonarLint.
 
+## Cambios recientes (resumen)
+
+- Se ha añadido seguridad con Spring Security y una `SecurityConfiguration` central.
+- CORS configurado vía `CorsConfig` para permitir llamadas desde el frontend (status/startup flows).
+- Integración interactiva con EntraID: nuevas rutas de login/callback y soporte de `app-token` para la app.
+- Nuevo flujo de selección de autenticación en frontend (`/auth-select`) y mejoras visuales en el login.
+- Se añadió un `CustomTokenAuthenticationFilter` y un provider para aceptar tokens de aplicación no-JWT (prefijos `entra-` y `basic-session-`).
+- Endpoints de arranque (`GET /api/auth/entra/status`) permitidos sin autenticación para comprobar sesión desde frontend.
+- `InboxManagementController` ahora devuelve cuerpos JSON `{ "error": "..." }` en 400 para facilitar depuración en UI.
+- Lógica de roles: los usuarios que realmente tienen acceso operativo al buzón (Mail.Read) son tratados como `ADMIN`.
+
+
 ## Compilar
 
 Backend (Spring Boot):

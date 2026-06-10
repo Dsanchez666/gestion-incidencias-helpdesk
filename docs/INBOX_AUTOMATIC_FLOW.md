@@ -59,6 +59,21 @@ Mantener autenticacion MFA de EntraID y automatizar la navegacion hasta la bande
 - `PATCH /api/inbox/gestion/{messageId}/asignacion`
 - `POST /api/inbox/gestion/{messageId}/asignar-incidencia`
 - `GET /api/tecnicos`
+ - `GET /api/auth/entra/status` (permitido sin token, usado por `StartupComponent`)
+ - `GET /api/auth/entra/login`
+ - `GET /api/auth/entra/callback`
+ - `POST /api/mailboxes/graph/trace`
+ - `POST /api/mailboxes/graph/user/trace`
+ - `GET /api/inbox/gestion?summaryLength=50`
+ - `GET /api/inbox/gestion/context`
+ - `GET /api/inbox/gestion/incidencias`
+ - `PATCH /api/inbox/gestion/{messageId}/incidencia`
+ - `PATCH /api/inbox/gestion/{messageId}/asignacion`
+ - `POST /api/inbox/gestion/{messageId}/asignar-incidencia` (single)
+ - `POST /api/inbox/gestion/asignar-incidencias` (bulk)
+ - `GET /api/tecnicos`
+
+Nota: en caso de errores de validación o autorización muchos endpoints devuelven `400` con un cuerpo JSON: `{ "error": "mensaje" }`. Esto facilita que el frontend muestre mensajes útiles al usuario.
 
 ## Persistencia MySQL
 

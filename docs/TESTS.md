@@ -83,6 +83,34 @@ Notas:
 - Lee el token mock desde `frontend/src/assets/EntraID_Conf.json` (local, no versionado).
 - Usa `frontend/src/assets/EntraID_Conf.example.json` como plantilla.
 
+## Comprobacion de estado de sesión (startup)
+
+Endpoint:
+- `GET http://localhost:4000/api/auth/entra/status`
+
+Notas:
+- Este endpoint está pensado para ser llamado por `StartupComponent` del frontend y puede estar permitido sin token para indicar `loggedIn=false`.
+
+## Test de traza de buzones (user trace)
+
+Endpoint:
+- `POST http://localhost:4000/api/mailboxes/graph/user/trace`
+
+Notas:
+- Este endpoint permite a la app comprobar carpetas de usuario con el token de aplicación o token de usuario.
+
+## Test asignacion masiva (bulk assign)
+
+Endpoint ejemplo:
+```bat
+curl -s -X POST "http://localhost:4000/api/inbox/gestion/asignar-incidencias?summaryLength=50" \
+  -H "Content-Type: application/json" \
+  -d "{\"messageIds\":[\"id1\",\"id2\"],\"tecnicoNombre\":\"juan\",\"prioridad\":\"NORMAL\"}"
+```
+
+Notas:
+- En caso de error de autorización o validación la respuesta suele ser `400` con cuerpo JSON `{ "error": "mensaje" }`.
+
 ## Test MS Graph (buzones)
 
 Endpoint:

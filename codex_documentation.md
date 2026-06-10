@@ -173,6 +173,17 @@ Antes de cerrar una tarea, revisar:
 
 ---
 
+## Nota adicional sobre cambios de seguridad y CORS
+
+Cuando se introduzcan cambios que afecten a autenticación, autorización o CORS, documenta además:
+- Ruta(s) afectadas y método HTTP.
+- Si el endpoint debe permitirse sin autenticación para flujos de arranque (`/api/auth/entra/status`, callbacks, etc.).
+- Tipo de token esperado (Bearer, app-token con prefijo, etc.) y cómo el frontend debe enviarlo.
+- Cambios en cabeceras CORS o en la `CorsConfigurationSource`.
+
+Esto ayuda a mantener sincronizados la configuración del servidor y las expectativas del frontend.
+
+
 ## Alcance
 
 Este documento no reemplaza `ARCHITECTURE.md`.

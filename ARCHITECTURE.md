@@ -134,6 +134,7 @@ Direccion objetivo:
 ### Adaptadores IN (entrada)
 - Controllers Spring REST en `backend-inc/.../auth`, `.../mailbox`, `.../incidencia`.
 - Componentes UI Angular en `frontend/src/app/features/*/ui`.
+ - Seguridad: `SecurityConfiguration`, `CustomTokenAuthenticationFilter` y `CustomAuthenticationProvider` gestionan autenticación/autorization a nivel de filtro antes de los controllers.
 
 ### Adaptadores OUT (salida)
 - Integracion con Microsoft Entra ID: `auth/entra/*`.
